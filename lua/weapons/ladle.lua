@@ -1,3 +1,5 @@
+if SERVER then AddCSLuaFile() end
+
 SWEP.Base = "weapon_hl2basebludgeon" -- required, credits to original creators for the base and this file
 
 SWEP.PrintName = "Ladle"
