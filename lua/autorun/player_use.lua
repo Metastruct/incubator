@@ -81,12 +81,12 @@ local function PlayerUsedByPlayer(initator)
 
 		if first then
 			surface.PlaySound("friends/friend_join.wav")
-			chat.AddText(Color(255, 222, 222), "[Notice] ", Color(255, 255, 255), "Disable the use messages by running in console: rp_react_to_use_notification 0")
+			--chat.AddText(Color(255, 222, 222), "[Notice] ", Color(255, 255, 255), "Disable the use messages by running in console: rp_react_to_use_notification 0")
 		elseif mode_msg >= 2 then
 			surface.PlaySound("friends/friend_join.wav")
 		end
 
-		chat.AddText(initator, Color(255, 255, 255), " pressed ", Color(255, 100, 50), "+use", Color(255, 255, 255), " on you", Color(255, 255, 255), "!")
+		--chat.AddText(initator, Color(255, 255, 255), " pressed ", Color(255, 100, 50), "+use", Color(255, 255, 255), " on you", Color(255, 255, 255), "!")
 	end
 end
 
