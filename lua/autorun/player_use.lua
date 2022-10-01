@@ -1,5 +1,4 @@
 local Tag = 'playerusehook'
-
 if SERVER then
 	util.AddNetworkString(Tag)
 	hook.Add("FindUseEntity", Tag, function(initator, target) end)
@@ -9,15 +8,13 @@ if SERVER then
 	})
 
 	hook.Add("PlayerUse", Tag, function(initator, target)
-		if initator:KeyPressed(IN_USE) then return end
+		if not initator:KeyPressed(IN_USE) then return end
 		if not target:IsValid() or not target:IsPlayer() then return end
 		local nextt = ratelimit[target] or 0
 		local now = RealTime()
 		if now < nextt then return end
 		ratelimit[target] = now + .05
-		if hook.Run("PlayerUsedByPlayer", target, initator) then
-			return
-		end
+		if hook.Run("PlayerUsedByPlayer", target, initator) then return end
 		net.Start(Tag)
 		net.WriteEntity(initator)
 		net.Send(target)
@@ -26,6 +23,7 @@ if SERVER then
 	return
 end
 
+local WHITE= Color(255, 255, 255)
 local help = [[ 
 0=disabled
  - 1=look at user
@@ -34,12 +32,18 @@ local help = [[
 
  - HINT: hook.Add("PlayerUsedByPlayer","a",function(me,initator) print("USE TEST",me,initator) return true end)
 ]]
+local rp_react_to_use_mode_friends_only = CreateClientConVar("rp_react_to_use_mode_friends_only", "0", true, false, "Should react action be triggered by friends only", 0, 4)
+local rp_react_to_use_friends_only = CreateClientConVar("rp_react_to_use_friends_only", "0", true, false, "Should only friends be able to do anything with use", 0, 4)
 local rp_react_to_use_mode = CreateClientConVar("rp_react_to_use_mode", "0", true, false, help, 0, 4)
 local rp_react_to_use_saysound = CreateClientConVar("rp_react_to_use_saysound", "none", true, false, "Plays saysound command with the following sound. Empty string or \"none\" to disable.")
-local rp_react_to_use_notification = CreateClientConVar("rp_react_to_use_notification", "1", true, false, "1=print message of user, 2=also play a sound")
+local rp_react_to_use_notification = CreateClientConVar("rp_react_to_use_notification", "2", true, false, "1=print message of user, 2=also play a sound")
+local rp_react_to_use_notification_sound = CreateClientConVar("rp_react_to_use_notification_sound", "physics/wood/wood_furniture_impact_soft1.wav", true, false, "Notification sound to play to you. Empty to disable.")
 local rp_react_to_use_only_afk = CreateClientConVar("rp_react_to_use_only_afk", "0", true, false, "1=Only react if AFK", 0, 1)
+local rp_react_to_use_notification_every = CreateClientConVar("rp_react_to_use_notification_every", "3", true, false, "Only allow pressing every N seconds per player", 0, 1)
+local rp_react_to_use_notification_in_chat = CreateClientConVar("rp_react_to_use_notification_in_chat", "0", true, false, "0=notification 1=chat message", 0, 1)
 local ratelimit = 0
 local ratelimit_msg = 0
+local msg_next_ok_ply = 0
 local last_user
 local first_msg = true
 
@@ -47,46 +51,90 @@ local function PlayerUsedByPlayer(initator)
 	local mode = rp_react_to_use_mode:GetInt()
 	local mode_msg = rp_react_to_use_notification:GetInt()
 	local soundstr = rp_react_to_use_saysound:GetString()
+	local rp_react_to_use_notification_sound = rp_react_to_use_notification_sound:GetString()
 	local only_afk = rp_react_to_use_only_afk:GetBool()
+	local use_chat = rp_react_to_use_notification_in_chat:GetBool()
+	local rp_react_to_use_notification_every = rp_react_to_use_notification_every:GetFloat()
+	local rp_react_to_use_friends_only = rp_react_to_use_friends_only:GetBool()
+	local rp_react_to_use_mode_friends_only = rp_react_to_use_mode_friends_only:GetBool()
 
 	if soundstr:Trim() == "" or soundstr:Trim() == "none" then
 		soundstr = false
+	end
+
+	local arefriends
+
+	if rp_react_to_use_mode_friends_only or rp_react_to_use_friends_only then
+		arefriends = LocalPlayer():IsFriend(initator)
+		if rp_react_to_use_friends_only and not arefriends then return end
 	end
 
 	local now = RealTime()
 	local first = first_msg
 	first_msg = false
 
-	if first or mode == 1 or mode == 2 then
-		if now < ratelimit then return end
-		ratelimit = now + math.Rand(2, 5)
-		local stop_afk = only_afk and LocalPlayer():IsAFK()
+	if not rp_react_to_use_mode_friends_only or arefriends then
+		if first or mode == 1 or mode == 2 then
+			if now < ratelimit then return end
+			ratelimit = now + math.Rand(2, 5)
+			local stop_afk = only_afk and LocalPlayer():IsAFK()
 
-		if not stop_afk then
-			if mode == 2 or first then
-				RunConsoleCommand("saysound", soundstr or "suit denydevice")
+			if not stop_afk then
+				if mode == 2 or first then
+					RunConsoleCommand("saysound", soundstr or "suit denydevice")
+				end
+
+				LookAtSmooth(initator, 1)
 			end
-
-			LookAtSmooth(initator, 1)
+		elseif mode == 3 then
+			if now < ratelimit then return end
+			ratelimit = now + math.Rand(2, 5)
+			RunConsoleCommand("saysound", soundstr or "suit denydevice")
 		end
-	elseif mode == 3 then
-		if now < ratelimit then return end
-		ratelimit = now + math.Rand(2, 5)
-		RunConsoleCommand("saysound", soundstr or "suit denydevice")
 	end
 
 	if first or mode_msg > 0 then
-		if (now - ratelimit_msg) < (last_user == initator and .5 or .5) then return end
+		if (now - ratelimit_msg) < .5 then return end
 		ratelimit_msg = now
 
-		if first then
-			surface.PlaySound("friends/friend_join.wav")
-			--chat.AddText(Color(255, 222, 222), "[Notice] ", Color(255, 255, 255), "Disable the use messages by running in console: rp_react_to_use_notification 0")
-		elseif mode_msg >= 2 then
-			surface.PlaySound("friends/friend_join.wav")
+		if last_user ~= initator then
+			last_user = initator
+		elseif now < msg_next_ok_ply then
+			print("rate limit",initator)
+			return
 		end
 
-		--chat.AddText(initator, Color(255, 255, 255), " pressed ", Color(255, 100, 50), "+use", Color(255, 255, 255), " on you", Color(255, 255, 255), "!")
+		msg_next_ok_ply = now + math.Clamp(rp_react_to_use_notification_every, 0, 60 * 5)
+
+		if first then
+			if rp_react_to_use_notification_sound:Trim()~="" then
+				surface.PlaySound(rp_react_to_use_notification_sound)
+			end
+			chat.AddText(Color(255, 222, 222), "[Notice] ", WHITE, "Disable the use messages by running in console: rp_react_to_use_notification 0")
+		elseif mode_msg >= 2 then
+			if rp_react_to_use_notification_sound:Trim()~="" then
+				surface.PlaySound(rp_react_to_use_notification_sound)
+			end
+		end
+
+		--
+		if not use_chat then
+			MsgC(initator, WHITE, " pressed +use on you!\n")
+		end
+
+		if LocalPlayer():CanSee(initator) then
+			if use_chat then
+				chat.AddText(initator, WHITE, " wants your attention!")
+			else
+				notification.AddLegacy(initator:GetName() .. " wants your attention!", NOTIFY_GENERIC, 5)
+			end
+		else
+			if use_chat then
+				chat.AddText(initator, WHITE, " tapped on your shoulder!")
+			else
+				notification.AddLegacy(initator:GetName() .. " tapped on your shoulder!", NOTIFY_GENERIC, 5)
+			end
+		end
 	end
 end
 
