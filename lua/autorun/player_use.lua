@@ -23,12 +23,61 @@ if SERVER then
 	return
 end
 
+-- helper
+
+local function getStartledBy(target,me)
+	--TODO: Serverside
+	local startt=RealTime()
+	hook.Add("StartCommand",Tag,function(pl,mv)
+		local now = RealTime()
+		local me=me or pl -- TODO
+		local cmd=mv
+		if now-startt>0.2 then 
+			hook.Remove("StartCommand",Tag)
+			return
+		end
+	
+		if --(SERVER and not me:IsBot()) or
+			 not me:Alive()
+			or me:GetMoveType() ~= MOVETYPE_WALK
+			or not me:IsOnGround()
+			then return end
+	
+		local mypos = me:GetPos()
+	
+		
+		local norm = target:GetPos()-mypos
+		norm.z = 0
+		norm:Normalize()
+	
+	
+		local va = cmd:GetViewAngles()
+		va.r = 0
+		va.p = 0
+		va.y = va.y
+	
+	
+		norm:Rotate(-va)
+		norm:Mul(250)
+		local fw, sd = cmd:GetForwardMove(), cmd:GetSideMove()
+	
+		fw = fw - norm.x
+		sd = sd + norm.y
+		--print(norm)
+		cmd:SetForwardMove(fw)
+		cmd:SetSideMove(sd)
+
+
+	end)
+	LookAtSmooth(target,1)
+end
+
+
 local WHITE= Color(255, 255, 255)
-local help = [[ 
-0=disabled
- - 1=look at user
- - 2=look at user and play a sound from rp_react_to_use_saysound
- - 3=only play deny sound or sound set on rp_react_to_use_saysound cvar
+local help = [[0 = disabled
+ - 1 = look at user
+ - 2 = look at user and play a sound from rp_react_to_use_saysound
+ - 3 = only play deny sound or sound set on rp_react_to_use_saysound cvar
 
  - HINT: hook.Add("PlayerUsedByPlayer","a",function(me,initator) print("USE TEST",me,initator) return true end)
 ]]
@@ -41,6 +90,8 @@ local rp_react_to_use_notification_sound = CreateClientConVar("rp_react_to_use_n
 local rp_react_to_use_only_afk = CreateClientConVar("rp_react_to_use_only_afk", "0", true, false, "1=Only react if AFK", 0, 1)
 local rp_react_to_use_notification_every = CreateClientConVar("rp_react_to_use_notification_every", "3", true, false, "Only allow pressing every N seconds per player", 0, 1)
 local rp_react_to_use_notification_in_chat = CreateClientConVar("rp_react_to_use_notification_in_chat", "0", true, false, "0=notification 1=chat message", 0, 1)
+local rp_react_to_use_do_not_move = CreateClientConVar("rp_react_to_use_do_not_move", "0", true, false, "Only look towards player instead of moving away", 0, 1)
+
 local ratelimit = 0
 local ratelimit_msg = 0
 local msg_next_ok_ply = 0
@@ -84,7 +135,13 @@ local function PlayerUsedByPlayer(initator)
 					RunConsoleCommand("saysound", soundstr or "suit denydevice")
 				end
 
-				LookAtSmooth(initator, 1)
+				if first or rp_react_to_use_do_not_move:GetBool() then
+					LookAtSmooth(initator, 1)
+				else
+					getStartledBy(initator)
+				end
+					
+					
 			end
 		elseif mode == 3 then
 			if now < ratelimit then return end
