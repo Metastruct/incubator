@@ -26,7 +26,7 @@ hook.Add("SetupMove", "GoldSrcUnduck", function(ply, mv, cmd)
     if ply:GetMoveType() ~= MOVETYPE_WALK then return end
 
     if not ply:OnGround() then
-        ply.fastUnDuckAirTime = CurTime()
+        ply.goldsrc_fastUnDuckAirTime = CurTime()
 
         if mv:KeyReleased(IN_DUCK) then
             local hullMin, hullMax = ply:GetHull()
@@ -51,21 +51,21 @@ hook.Add("SetupMove", "GoldSrcUnduck", function(ply, mv, cmd)
 
     -- If player is in the air or was in the air at most 0.05 seconds ago
     -- We should make him unduck fast
-    local shouldFastUnDuck = CurTime() - (ply.fastUnDuckAirTime or 0) < 0.05
+    local shouldFastUnDuck = CurTime() - (ply.goldsrc_fastUnDuckAirTime or 0) < 0.05
 
     -- Toggle normal unduck
-    if ply.fastUnDuck and not shouldFastUnDuck then
+    if ply.goldsrc_fastUnDuck and not shouldFastUnDuck then
         if ply.normalUnDuckSpeed then
-            ply:SetUnDuckSpeed(ply.normalUnDuckSpeed)
+            ply:SetUnDuckSpeed(ply.goldsrc_normalUnDuckSpeed)
         end
-        ply.fastUnDuck = false
+        ply.goldsrc_fastUnDuck = false
     end
 
     -- Toggle fast unduck
     if not ply.fastUnDuck and shouldFastUnDuck then
-        ply.normalUnDuckSpeed = ply:GetUnDuckSpeed()
+        ply.goldsrc_normalUnDuckSpeed = ply:GetUnDuckSpeed()
         ply:SetUnDuckSpeed(0)
-        ply.fastUnDuck = true
+        ply.goldsrc_fastUnDuck = true
     end
 end)
 
