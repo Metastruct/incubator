@@ -90,7 +90,7 @@ if CLIENT then
 			hook.Add("HUDPaint", Tag, HUDPaint)
 		elseif rtype == fitemeing then
 			last = rtype
-			snd = CreateSound(LocalPlayer(), math.random(1, 2) == 1 and 'music/hl2_song20_submix0.mp3' or 'music/hl2_song12_long.mp3')
+			snd = CreateSound(LocalPlayer(), (table.Random{'music/hl2_song20_submix0.mp3' , 'music/hl2_song12_long.mp3','music/hl2_song31.mp3','music/hl2_song4.mp3','music/hl2_song15.mp3','music/hl1_song17.mp3','music/hl2_song3.mp3'}))
 			LocalPlayer():EmitSound'plats/elevbell1.wav'
 			snd:Play()
 
@@ -282,6 +282,8 @@ local function is_eligible(pl)
 	if pl:GetNoDraw() then return false, 'not drawing' end
 	if not pl:Alive() then return false, 'not alive' end
 	if not pl:IsSolid() then return false, 'not solid' end
+	if pl:GetGravity()~=1 and pl:GetGravity()~=0 then return false, 'gravity' end
+	if pl.GetGravityFactor and pl:GetGravityFactor()~=1 then return false, 'gravity' end
 	if pl:GetParent():IsValid() then return false, 'parented' end
 	if pl:GetColor().a < 255 then return false, 'camouflage player color' end
 	if pl:GetMaterial() ~= "" then return false, 'camouflage material' end
@@ -413,7 +415,9 @@ fiteme_init = function(pl1, pl2)
 					return
 				end
 
+				-- both are bad, something is broken.
 				if bad ~= true then
+					print("cheat checking bug or env changed")
 					bad = true
 				end
 			end
@@ -428,6 +432,10 @@ fiteme_init = function(pl1, pl2)
 				end
 
 				if pl:GetLaggedMovementValue() > 1 then
+					setbad(pl)
+					continue
+				end
+				if pl:GetJumpPower() ~= 200 then
 					setbad(pl)
 					continue
 				end
@@ -451,7 +459,8 @@ fiteme_init = function(pl1, pl2)
 		local _ = pl.PreventMoving and pl:PreventMoving(5.5)
 		pl:SetHealth(100)
 		pl:SetArmor(0)
-
+		pl:SetJumpPower(200) -- can't know default jump power
+		
 		if pl.GetSuperJumpMultiplier then
 			pl.SetSuperJumpMultiplier_mg_fiteme = pl:GetSuperJumpMultiplier()
 			pl:SetSuperJumpMultiplier(1)
@@ -540,7 +549,7 @@ hook.Add("PlayerReserved", Tag, function(pl, tag, prev)
 		end
 	elseif tag == fitemeing then
 		pl:ChatPrint(("Battle started against %s..."):format(tostring(pl.fiteme_opponent)))
-		Msg"[fiteme] "
+		Msg"[1v1] "
 		print(pl, "battle with", pl.fiteme_opponent)
 
 		if not pl.fiteme_opponent or not pl.fiteme_opponent:IsValid() then
