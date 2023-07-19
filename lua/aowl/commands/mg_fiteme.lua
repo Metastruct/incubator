@@ -738,6 +738,10 @@ hook.Add("DoPlayerDeath", Tag, function(pl1, attacker, dmg)
 	endfiteme(pl1, has_winner, inflictor)
 end)
 
+hook.Add("PlayerSilentDeath", Tag, function(pl1)
+	endfiteme(pl1, false)
+end)
+
 hook.Add("PlayerDisconnected", Tag, function(pl1)
 	endfiteme(pl1, false)
 end)
