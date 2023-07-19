@@ -7,7 +7,6 @@
 -- - environment griefing checking
 -- - more maps
 -- - Hoist generic checking code (cheating, already taken to other games) to minigames utilities file. CPPI but for minigames basically.
-
 local Tag = 'fiteme'
 local fitemeing = 'fitemeing'
 if not pcall(require, 'landmark') then return end
@@ -21,6 +20,15 @@ if CLIENT then
 	local col_HP = Color(255, 240, 240, 255)
 	local col_bracket2 = col_bracket
 	if util.NetworkStringToID(Tag) <= 0 then return end
+	local in_highperf = _G.FITEME_HIGH_PERF_REQUESTED
+
+	local function SetHighPerf(set)
+		if set and in_highperf then return end
+		if not set and not in_highperf then return end
+		in_highperf = set and true or false
+		_G.FITEME_HIGH_PERF_REQUESTED = in_highperf
+		local _ = outfitter and outfitter.SetHighPerf and outfitter.SetHighPerf(in_highperf)
+	end
 
 	net.Receive(Tag, function()
 		local pl1 = net.ReadEntity()
@@ -44,6 +52,8 @@ if CLIENT then
 			if pac_was_enabled then
 				cvar:SetBool(false)
 			end
+
+			SetHighPerf(true)
 		elseif is_fitemeing and tag == false then
 			is_fitemeing = nil
 
@@ -52,6 +62,7 @@ if CLIENT then
 			end
 
 			pac_was_enabled = nil
+			SetHighPerf(false)
 		end
 
 		print(tag)
@@ -90,7 +101,7 @@ if CLIENT then
 			hook.Add("HUDPaint", Tag, HUDPaint)
 		elseif rtype == fitemeing then
 			last = rtype
-			snd = CreateSound(LocalPlayer(), (table.Random{'music/hl2_song20_submix0.mp3' , 'music/hl2_song12_long.mp3','music/hl2_song31.mp3','music/hl2_song4.mp3','music/hl2_song15.mp3','music/hl1_song17.mp3','music/hl2_song3.mp3'}))
+			snd = CreateSound(LocalPlayer(), (table.Random{'music/hl2_song20_submix0.mp3', 'music/hl2_song12_long.mp3', 'music/hl2_song31.mp3', 'music/hl2_song4.mp3', 'music/hl2_song15.mp3', 'music/hl1_song17.mp3', 'music/hl2_song3.mp3'}))
 			LocalPlayer():EmitSound'plats/elevbell1.wav'
 			snd:Play()
 
@@ -282,8 +293,8 @@ local function is_eligible(pl)
 	if pl:GetNoDraw() then return false, 'not drawing' end
 	if not pl:Alive() then return false, 'not alive' end
 	if not pl:IsSolid() then return false, 'not solid' end
-	if pl:GetGravity()~=1 and pl:GetGravity()~=0 then return false, 'gravity' end
-	if pl.GetGravityFactor and pl:GetGravityFactor()~=1 then return false, 'gravity' end
+	if pl:GetGravity() ~= 1 and pl:GetGravity() ~= 0 then return false, 'gravity' end
+	if pl.GetGravityFactor and pl:GetGravityFactor() ~= 1 then return false, 'gravity' end
 	if pl:GetParent():IsValid() then return false, 'parented' end
 	if pl:GetColor().a < 255 then return false, 'camouflage player color' end
 	if pl:GetMaterial() ~= "" then return false, 'camouflage material' end
@@ -435,6 +446,7 @@ fiteme_init = function(pl1, pl2)
 					setbad(pl)
 					continue
 				end
+
 				if pl:GetJumpPower() ~= 200 then
 					setbad(pl)
 					continue
@@ -460,7 +472,7 @@ fiteme_init = function(pl1, pl2)
 		pl:SetHealth(100)
 		pl:SetArmor(0)
 		pl:SetJumpPower(200) -- can't know default jump power
-		
+
 		if pl.GetSuperJumpMultiplier then
 			pl.SetSuperJumpMultiplier_mg_fiteme = pl:GetSuperJumpMultiplier()
 			pl:SetSuperJumpMultiplier(1)
