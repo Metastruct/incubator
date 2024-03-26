@@ -475,7 +475,7 @@ fiteme_init = function(pl1, pl2)
 
 		if pl.GetSuperJumpMultiplier then
 			pl.SetSuperJumpMultiplier_mg_fiteme = pl:GetSuperJumpMultiplier()
-			pl:SetSuperJumpMultiplier(1)
+			pl:SetSuperJumpMultiplier(10)
 		end
 
 		pl.fiteme_chosen_weapon = chosen_weapon
