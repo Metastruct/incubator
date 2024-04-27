@@ -1,4 +1,6 @@
 
+if !CLIENT then return end
+
 local FONT = 'Trebuchet24'
 local FONT_HEIGHT = draw.GetFontHeight( FONT )
 
