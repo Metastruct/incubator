@@ -460,29 +460,6 @@ mp_popuper = {
 	end
 }
 
-local prefixes = {
-    '/',
-    '!',
-    '.',
-}
-
-hook.Add( 'OnPlayerChat', 'popuper', function( ply, message )
-	if !mp_popuper then return end
-	if ply != LocalPlayer() then return end
-
-	local usedPrefix = nil
-
-    for _, prefix in ipairs( prefixes ) do
-        if string.StartWith( message, prefix ) then
-            usedPrefix = prefix
-            break
-        end
-    end
-
-    if !usedPrefix then return end
-    local args = string.Explode( '%s+', string.sub( message, #usedPrefix + 1 ):lower(), true )
-
-    if args[1] == 'popup' then
-		mp_popuper.toggle()
-	end
+list.Set( "ChatCommands", "popup", function( ... )
+	mp_popuper.toggle()
 end )
