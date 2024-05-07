@@ -1,6 +1,7 @@
 
 if !CLIENT then return end
 
+local EASE = 0.2
 local FONT = 'Trebuchet24'
 local FONT_HEIGHT = draw.GetFontHeight( FONT )
 
@@ -448,7 +449,6 @@ mp_popuper = {
 			mp_popuper.frame = frame
 			frame:DockPadding( 1, 29, 0, 0 )
 			frame:SetSize( 350, ScrH() )
-			frame:SetPos( ScrW() - frame:GetWide(), 0 )
 			frame:SetTitle( '' )
 			frame:MakePopup()
 			frame:SetSizable( true )
@@ -456,8 +456,8 @@ mp_popuper = {
 			frame:ShowCloseButton( false )
 			frame:SetKeyboardInputEnabled( false )
 
-			frame:SetAlpha( 0 )
-			frame:AlphaTo( 255, 0.25 )
+			frame:SetPos( ScrW(), 0 )
+			frame:MoveTo( ScrW() - frame:GetWide(), 0, 0.25, 0, EASE )
 
 			function frame:Close()
 				frame:SetMouseInputEnabled( false )
@@ -465,7 +465,7 @@ mp_popuper = {
 
 				MediaPlayer.HideSidebar()
 
-				frame:AlphaTo( 0, 0.25, 0, function()
+				frame:MoveTo( ScrW(), 0, 0.25, 0, EASE, function()
 					frame:Remove()
 					mp_popuper.close()
 				end )
