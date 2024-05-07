@@ -479,11 +479,16 @@ mp_popuper = {
 				surface.DrawRect( 0, 0, 1, h )
 			end
 
+			local visible = gui.IsGameUIVisible()
 			function frame:Think()
-				if gui.IsGameUIVisible() then
-					gui.HideGameUI()
-					mp_popuper.close()
-					frame.Think = nil
+				if visible != gui.IsGameUIVisible() then
+					visible = gui.IsGameUIVisible()
+
+					if visible then
+						gui.HideGameUI()
+						mp_popuper.close()
+						frame.Think = nil
+					end
 				end
 			end
 
