@@ -5,7 +5,7 @@ local EASE = 0.2
 local FONT = 'Trebuchet24'
 local FONT_HEIGHT = draw.GetFontHeight( FONT )
 
-function getMediaPlayers()
+local function getMediaPlayers()
 	return ents.FindByClass( "mediaplayer_tv" )
 end
 
@@ -107,7 +107,7 @@ local function createCloseButton( parent, onClose )
 	return close
 end
 
-function togglePopup( player )
+local function togglePopup( player )
 	if !player then return end
 
 	if IsValid( player.popup ) then
