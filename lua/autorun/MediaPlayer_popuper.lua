@@ -324,6 +324,8 @@ local function createMediaPlayerController( player, panel, list )
 			panel.sidebarButton:Dock( LEFT )
 
 			function panel.sidebarButton:DoClick()
+				if !player._mp then return end
+
 				MediaPlayer.HideSidebar()
 
 				if list.showSideBarFor == player._mp then
@@ -340,7 +342,20 @@ local function createMediaPlayerController( player, panel, list )
 
 			watch({
 				value = function()
-					return list.showSideBarFor == player._mp
+					return player._mp
+				end,
+				onChange = function( mp )
+					panel.sidebarButton:SetDisabled( !mp )
+				end,
+				callOnInit = true,
+				watchIf = function()
+					return IsValid( panel.sidebarButton )
+				end,
+			})
+
+			watch({
+				value = function()
+					return list.showSideBarFor and list.showSideBarFor == player._mp
 				end,
 				onChange = function( isShowing )
 					if isShowing then
