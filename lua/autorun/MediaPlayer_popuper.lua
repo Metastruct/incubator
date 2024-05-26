@@ -121,10 +121,10 @@ local function togglePopup( player )
 	player.popup_meta = player.popup_meta or {}
 
 	local meta = player.popup_meta
-	local x = meta.x or 50
-	local y = meta.y or 50
-	local w = meta.w or 160
-	local h = meta.h or 90
+	local x = meta.x or ScrH() / 50
+	local y = meta.y or ScrH() / 50
+	local w = meta.w or ScrW() * 0.25
+	local h = meta.h or ScrH() * 0.25
 
 	popup:DockPadding( 5, 25, 5, 5 )
 	popup:SetPos( x, y )
@@ -161,6 +161,25 @@ local function togglePopup( player )
 			y = ScrH() - h
 			popup.y = y
 		end
+
+		local left, top, right, bottom = popup:GetDockPadding()
+		local x_padding, y_padding = left + right, top + bottom
+
+		w = math.min( x + w, ScrW() ) - x
+		h = math.min( y + h, ScrH() ) - y
+
+		local screen_w, screen_h = w - x_padding, h - y_padding
+		local screen_w_ratio, screen_h_ratio = screen_w / 16, screen_h / 9
+
+		local screen_min_ratio = math.min( screen_w_ratio, screen_h_ratio )
+
+		screen_w = screen_w / screen_w_ratio * screen_min_ratio
+		screen_h = screen_h / screen_h_ratio * screen_min_ratio
+
+		w = math.round( screen_w + x_padding )
+		h = math.round( screen_h + y_padding )
+
+		popup:SetSize( w, h )
 
 		meta.x = popup.x
 		meta.y = popup.y
@@ -264,6 +283,20 @@ local function togglePopup( player )
 				local media = player._mp:CurrentMedia()
 
 				media:Draw( w, h )
+
+				-- local w_ratio = w / 16
+				-- local h_ratio = h / 9
+				-- local min_ratio = math.min( w_ratio, h_ratio )
+
+				-- local screen_w = w / w_ratio * min_ratio
+				-- local screen_h = h / h_ratio * min_ratio
+
+				-- local matrix = Matrix()
+				-- matrix:Translate( Vector( ( w - screen_w ) / 2, ( h - screen_h ) / 2, 0 ) )
+
+				-- cam.PushModelMatrix( matrix )
+				-- 	media:Draw( screen_w, screen_h )
+				-- cam.PopModelMatrix()
 			end
 		end
 	end
