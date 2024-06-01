@@ -146,45 +146,54 @@ local function togglePopup( player )
 		local x, y = popup:GetPos()
 		local w, h = popup:GetSize()
 
-		if x < 0 then
-			x = 0
-			popup.x = 0
-		elseif x + w > ScrW() then
-			x = ScrW() - w
+		if meta.x != x then
+			if x < 0 then
+				x = 0
+			elseif x + w > ScrW() then
+				x = ScrW() - w
+			end
+
 			popup.x = x
+			meta.x = x
 		end
 
-		if y < 0 then
-			y = 0
-			popup.y = 0
-		elseif y + h > ScrH() then
-			y = ScrH() - h
+		if meta.y != y then
+			if y < 0 then
+				y = 0
+			elseif y + h > ScrH() then
+				y = ScrH() - h
+			end
+
 			popup.y = y
+			meta.y = y
 		end
 
-		local left, top, right, bottom = popup:GetDockPadding()
-		local x_padding, y_padding = left + right, top + bottom
+		if meta.w != w or meta.h != h then
+			local left, top, right, bottom = popup:GetDockPadding()
+			local x_padding, y_padding = left + right, top + bottom
 
-		w = math.min( x + w, ScrW() ) - x
-		h = math.min( y + h, ScrH() ) - y
+			w = math.min( x + w, ScrW() ) - x
+			h = math.min( y + h, ScrH() ) - y
 
-		local screen_w, screen_h = w - x_padding, h - y_padding
-		local screen_w_ratio, screen_h_ratio = screen_w / 16, screen_h / 9
+			local screen_w, screen_h = w - x_padding, h - y_padding
+			local screen_w_ratio, screen_h_ratio = screen_w / 16, screen_h / 9
 
-		local screen_min_ratio = math.min( screen_w_ratio, screen_h_ratio )
+			local screen_min_ratio = math.min( screen_w_ratio, screen_h_ratio )
 
-		screen_w = screen_w / screen_w_ratio * screen_min_ratio
-		screen_h = screen_h / screen_h_ratio * screen_min_ratio
+			screen_w = screen_w / screen_w_ratio * screen_min_ratio
+			screen_h = screen_h / screen_h_ratio * screen_min_ratio
 
-		w = math.round( screen_w + x_padding )
-		h = math.round( screen_h + y_padding )
+			w = math.round( screen_w + x_padding )
+			h = math.round( screen_h + y_padding )
 
-		popup:SetSize( w, h )
+			popup:SetSize( w, h )
+			meta.w = w
+			meta.h = h
 
-		meta.x = popup.x
-		meta.y = popup.y
-		meta.w = w
-		meta.h = h
+			if IsValid( popup.close ) then
+				popup.close:SetPos( popup:GetWide() - popup.close:GetWide(), 1 )
+			end
+		end
 	end
 
 	function popup:Paint( w, h )
@@ -231,27 +240,13 @@ local function togglePopup( player )
 	end
 
 	do // Close button
-		local close = createCloseButton( popup, function()
+		popup.close = createCloseButton( popup, function()
 			popup:Remove()
 
-			if player then
+			if IsValid( player ) then
 				player.popup = nil
 			end
 		end )
-
-		watch({
-			value = function()
-				return popup:GetWide()
-			end,
-			onChange = function( wide )
-				close:SetPos( popup:GetWide() - close:GetWide(), 1 )
-			end,
-			watchIf = function()
-				return IsValid( popup )
-			end,
-			watchInterval = 0.1,
-			callOnInit = true,
-		})
 	end
 
 	do // Screen panel
