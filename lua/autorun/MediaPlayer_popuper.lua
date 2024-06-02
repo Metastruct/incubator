@@ -191,7 +191,7 @@ local function togglePopup( player )
 			meta.h = h
 
 			if IsValid( popup.close ) then
-				popup.close:SetPos( popup:GetWide() - popup.close:GetWide(), 1 )
+				popup.close:Refresh()
 			end
 		end
 	end
@@ -247,6 +247,12 @@ local function togglePopup( player )
 				player.popup = nil
 			end
 		end )
+
+		function popup.close:Refresh()
+			popup.close:SetPos( popup:GetWide() - popup.close:GetWide(), 1 )
+		end
+
+		popup.close:Refresh()
 	end
 
 	do // Screen panel
