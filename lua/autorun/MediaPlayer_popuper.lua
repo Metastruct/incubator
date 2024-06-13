@@ -559,9 +559,29 @@ mp_popuper = {
 			frame.list:Dock( FILL )
 			frame.list:DockMargin( 5, 0, 0, 0 )
 			frame.list.mediaPlayers = {}
+			frame.list.notFoundLabel = nil
 
 			function frame.list:Refresh()
-				for _, player in ipairs( getMediaPlayers() ) do
+				local mediaPlayers = getMediaPlayers()
+
+				if #mediaPlayers == 0 then
+					if !IsValid( frame.list.notFoundLabel ) then
+						local label = vgui.Create( 'DLabel', frame.list )
+						frame.list.notFoundLabel = label
+						label:SetText( 'No media players found' )
+						label:SetContentAlignment( 5 )
+						label:SetColor( color_white )
+						label:Dock( TOP )
+						label:SetTall( 25 )
+					end
+				else
+					if IsValid( frame.list.notFoundLabel ) then
+						frame.list.notFoundLabel:Remove()
+						frame.list.notFoundLabel = nil
+					end
+				end
+
+				for _, player in ipairs( mediaPlayers ) do
 					local panel = frame.list.mediaPlayers[player]
 					if IsValid( panel ) then continue end
 
