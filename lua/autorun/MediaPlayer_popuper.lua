@@ -6,7 +6,10 @@ local FONT = 'Trebuchet24'
 local FONT_HEIGHT = draw.GetFontHeight( FONT )
 
 local function getMediaPlayers()
-	return ents.FindByClass( "mediaplayer_tv" )
+	local tvs = ents.FindByClass( "mediaplayer_tv" )
+	local projectors = ents.FindByClass( "mediaplayer_projector" )
+
+	return table.Add( tvs, projectors )
 end
 
 local function togglePlayerSubscribtion( player )
