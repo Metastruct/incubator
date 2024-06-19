@@ -421,7 +421,7 @@ local function createMediaPlayerController( player, panel, list )
 				end,
 				onChange = function( value )
 					if value then
-						panel.subscribeButton:SetText( 'Ubsub.' )
+						panel.subscribeButton:SetText( 'Unsub.' )
 						panel.subscribeButton:SetWide( 50 )
 					else
 						panel.subscribeButton:SetText( 'Watch' )
