@@ -4,6 +4,8 @@ if !CLIENT then return end
 local EASE = 0.2
 local FONT = 'Trebuchet24'
 local FONT_HEIGHT = draw.GetFontHeight( FONT )
+local MUTE_UNFOCUSED_CONVAR = "mediaplayer_mute_unfocused"
+local MUTE_UNFOCUSED_DESCRIPTION = string.format( "Mute distant media players (%s)", MUTE_UNFOCUSED_CONVAR )
 
 local function getMediaPlayers()
 	local tvs = ents.FindByClass( "mediaplayer_tv" )
@@ -532,6 +534,7 @@ mp_popuper = {
 			end
 
 			local visible = gui.IsGameUIVisible()
+
 			function frame:Think()
 				if visible != gui.IsGameUIVisible() then
 					visible = gui.IsGameUIVisible()
@@ -543,7 +546,6 @@ mp_popuper = {
 					end
 				end
 			end
-
 		end
 
 		do // Close button
@@ -646,7 +648,7 @@ mp_popuper = {
 			})
 		end
 
-		do // Volume slider
+		do // Footer
 			frame.footerFrame = vgui.Create( 'DPanel', frame )
 			frame.footerFrame:Dock( BOTTOM )
 			local inlinePadding = 10
@@ -667,6 +669,32 @@ mp_popuper = {
 			function frame.footerFrame:Paint( w, h )
 				surface.SetDrawColor( 255, 255, 255 )
 				surface.DrawRect( 0, 0, w, 1 )
+			end
+
+			do // Mute Unfocused Toggle
+				local muteUnfocused = {}
+				frame.muteUnfocused = muteUnfocused
+
+				muteUnfocused.frame = vgui.Create( 'DPanel', frame.footerFrame )
+				muteUnfocused.frame:DockPadding( 0, 5, 0, 5 )
+				muteUnfocused.frame.Paint = nil
+
+				do // Mute Unfocused Checkbox
+					muteUnfocused.checkbox = vgui.Create( 'DCheckBox', muteUnfocused.frame )
+					muteUnfocused.checkbox:SetValue( GetConVar( MUTE_UNFOCUSED_CONVAR ):GetBool() )
+					muteUnfocused.checkbox:Dock( RIGHT )
+
+					function muteUnfocused.checkbox:OnChange( value )
+						GetConVar( MUTE_UNFOCUSED_CONVAR ):SetBool( value )
+					end
+				end
+
+				do // Mute Unfocused Label
+					muteUnfocused.label = vgui.Create( 'DLabel', muteUnfocused.frame )
+					muteUnfocused.label:SetText( MUTE_UNFOCUSED_DESCRIPTION )
+					muteUnfocused.label:DockMargin( 0, 0, 5, 0 )
+					muteUnfocused.label:Dock( FILL )
+				end
 			end
 
 			do // Volume slider
