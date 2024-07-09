@@ -514,14 +514,17 @@ mp_popuper = {
 			frame:MoveTo( ScrW() - frame:GetWide(), 0, 0.25, 0, EASE )
 
 			function frame:Close()
-				frame:SetMouseInputEnabled( false )
-				frame:SetKeyboardInputEnabled( false )
+				if mp_popuper.frame == frame then
+					mp_popuper.frame = nil
+				end
 
 				MediaPlayer.HideSidebar()
 
+				frame:SetMouseInputEnabled( false )
+				frame:SetKeyboardInputEnabled( false )
+
 				frame:MoveTo( ScrW(), 0, 0.25, 0, EASE, function()
 					frame:Remove()
-					mp_popuper.close()
 				end )
 			end
 
@@ -729,7 +732,6 @@ mp_popuper = {
 	close = function()
 		if IsValid( mp_popuper.frame ) then
 			mp_popuper.frame:Close()
-			mp_popuper.frame = nil
 		end
 	end,
 	toggle = function()
