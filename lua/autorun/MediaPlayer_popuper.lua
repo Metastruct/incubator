@@ -102,7 +102,7 @@ local function createCloseButton( parent, onClose )
 	function close:Paint( w, h )
 		surface.SetDrawColor( 255, 255, 255 )
 		surface.DrawLine( padding, padding, w - padding, h - padding )
-		surface.DrawLine( w - padding - 1, padding, padding - 1, h - padding )
+		surface.DrawLine( w - padding, padding, padding, h - padding )
 	end
 
 	function close:DoClick()
