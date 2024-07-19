@@ -6,6 +6,10 @@ local FONT = 'Trebuchet24'
 local FONT_HEIGHT = draw.GetFontHeight( FONT )
 local MUTE_UNFOCUSED_CONVAR = "mediaplayer_mute_unfocused"
 local MUTE_UNFOCUSED_DESCRIPTION = string.format( "Mute distant media players (%s)", MUTE_UNFOCUSED_CONVAR )
+local MP_POPUPER_HIDE_ON_SCREENSHOTS_CONVAR = "mp_popuper_hide_on_screenshots"
+local MP_POPUPER_HIDE_ON_SCREENSHOTS_DESCRIPTION = string.format( "Hide popup windows in screenshots" )
+
+local hidePopupOnScreenshotsConVar = CreateClientConVar( MP_POPUPER_HIDE_ON_SCREENSHOTS_CONVAR, 1, true, false, "Should popup windows be hidden in screenshots", 0, 1 )
 
 local function getMediaPlayers()
 	local tvs = ents.FindByClass( "mediaplayer_tv" )
@@ -131,6 +135,7 @@ local function togglePopup( player )
 	local w = meta.w or ScrW() * 0.25
 	local h = meta.h or ScrH() * 0.25
 
+	popup:SetRenderInScreenshots( !hidePopupOnScreenshotsConVar:GetBool() )
 	popup:DockPadding( 5, 25, 5, 5 )
 	popup:SetPos( x, y )
 	popup:SetSize( w, h )
@@ -672,6 +677,40 @@ mp_popuper = {
 			function frame.footerFrame:Paint( w, h )
 				surface.SetDrawColor( 255, 255, 255 )
 				surface.DrawRect( 0, 0, w, 1 )
+			end
+
+			do // Render Popups In Screenshots
+				local renderPopupsInScreenshots = {}
+				frame.renderPopupsInScreenshots = renderPopupsInScreenshots
+
+				renderPopupsInScreenshots.frame = vgui.Create( 'DPanel', frame.footerFrame )
+				renderPopupsInScreenshots.frame:DockPadding( 0, 5, 0, 5 )
+				renderPopupsInScreenshots.frame.Paint = nil
+
+				do // Render Popups In Screenshots Checkbox
+					renderPopupsInScreenshots.checkbox = vgui.Create( 'DCheckBox', renderPopupsInScreenshots.frame )
+					renderPopupsInScreenshots.checkbox:SetValue( hidePopupOnScreenshotsConVar:GetBool() )
+					renderPopupsInScreenshots.checkbox:Dock( RIGHT )
+
+					function renderPopupsInScreenshots.checkbox:OnChange( value )
+						hidePopupOnScreenshotsConVar:SetBool( value )
+
+						local mediaPlayers = getMediaPlayers()
+
+						for _, player in ipairs( mediaPlayers ) do
+							if IsValid( player.popup ) then
+								player.popup:SetRenderInScreenshots( !value )
+							end
+						end
+					end
+				end
+
+				do // Render Popups In Screenshots Label
+					renderPopupsInScreenshots.label = vgui.Create( 'DLabel', renderPopupsInScreenshots.frame )
+					renderPopupsInScreenshots.label:SetText( MP_POPUPER_HIDE_ON_SCREENSHOTS_DESCRIPTION )
+					renderPopupsInScreenshots.label:DockMargin( 0, 0, 5, 0 )
+					renderPopupsInScreenshots.label:Dock( FILL )
+				end
 			end
 
 			do // Mute Unfocused Toggle
