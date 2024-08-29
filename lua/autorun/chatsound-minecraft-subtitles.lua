@@ -4,42 +4,17 @@ if SERVER then
 	return
 end
 
-local FONT_NAME = 'ChatsoundMinecraftSubtitles'
-local FONT_SCALE = 12
 local MIN_FONT_SIZE = 1
 local MAX_FONT_SIZE = 8
 
 local enabledCV = CreateClientConVar( 'chatsounds_minecraft_subtitles_enable', 0, true, false, 'Toggle Minecraft-like subtitles for chatsounds', 0, 1 )
 local sizeCV = CreateClientConVar( 'chatsounds_minecraft_subtitles_size', 2, true, false, 'Sets Minecraft subtitles size', MIN_FONT_SIZE, MAX_FONT_SIZE )
 
-for scale = MIN_FONT_SIZE, MAX_FONT_SIZE do
-	local fontName = FONT_NAME .. scale
-	local fontSize = scale * FONT_SCALE
-
-	surface.CreateFont( fontName, {
-		-- On Windows/macOS, use the font-name which is shown to you by your operating system Font Viewer. On Linux, use the file name
-		font = system.IsLinux() and "MinecraftRegular.ttf" or "Minecraft",
-		extended = true,
-		size = fontSize,
-		weight = 100,
-		blursize = 0,
-		scanlines = 0,
-		antialias = false,
-		underline = false,
-		italic = false,
-		strikeout = false,
-		symbol = false,
-		rotary = false,
-		shadow = false,
-		additive = false,
-		outline = false,
-	})
-end
-
 ChatsoundMinecraftSubtitles = {
 	subtitles = {},
 
-	font = 'DermaDefault',
+	fontName = 'ChatsoundMinecraftSubtitles',
+	fontScale = 12,
 	fontHeight = -1, -- calculated
 
 	backgroundColor = Color( 0, 0, 0, 230 ),
@@ -55,7 +30,7 @@ ChatsoundMinecraftSubtitles = {
 	gap = 16,
 	padding = 8,
 	shadowOffset = -1, -- calculated
-	shadowOffsetBase = 1,
+	shadowOffsetScale = 1,
 	screenPaddingInt = 4,
 	screenPaddingPercent = 0.12,
 	minAngle = 30,
@@ -160,14 +135,36 @@ function ChatsoundMinecraftSubtitles:init()
 end
 
 function ChatsoundMinecraftSubtitles:calcScales()
-	local scale = sizeCV:GetInt()
-	self.shadowOffset = self.shadowOffsetBase * scale
-	self.font = FONT_NAME .. scale
-	self.fontHeight = draw.GetFontHeight( self.font )
+	local size = sizeCV:GetInt()
+	local fontSize = self.fontScale * size
+	self.shadowOffset = self.shadowOffsetScale * size
+
+	surface.CreateFont( self.fontName, {
+		-- On Windows/macOS, use the font-name which is shown to you by your operating system Font Viewer. On Linux, use the file name
+		font = system.IsLinux() and "MinecraftRegular.ttf" or "Minecraft",
+		extended = true,
+		size = fontSize,
+		weight = 100,
+		blursize = 0,
+		scanlines = 0,
+		antialias = false,
+		underline = false,
+		italic = false,
+		strikeout = false,
+		symbol = false,
+		rotary = false,
+		shadow = false,
+		additive = false,
+		outline = false,
+	})
 
 	timer.Simple( 0, function()
-		surface.SetFont( self.font )
+		surface.SetFont( self.fontName )
 
+		local _, fontHeight = surface.GetTextSize( 'test' )
+		-- draw.GetFontHeight doesn't update height
+
+		self.fontHeight = fontHeight
 		self.leftArrowWidth = surface.GetTextSize( self.leftArrow )
 		self.rightArrowWidth = surface.GetTextSize( self.rightArrow )
 		self.minStaticWidth = self.padding * 2 + self.gap * 2 + self.leftArrowWidth + self.rightArrowWidth
@@ -189,7 +186,7 @@ function ChatsoundMinecraftSubtitles:toggle()
 end
 
 function ChatsoundMinecraftSubtitles:setMinecraftFont()
-	surface.SetFont( self.font )
+	surface.SetFont( self.fontName )
 end
 
 function ChatsoundMinecraftSubtitles:drawMinecraftText( text, x, y, alpha )
