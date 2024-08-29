@@ -4,16 +4,19 @@ if SERVER then
 	return
 end
 
+local FONT_NAME = 'ChatsoundMinecraftSubtitles'
 local MIN_FONT_SIZE = 1
 local MAX_FONT_SIZE = 8
 
 local enabledCV = CreateClientConVar( 'chatsounds_minecraft_subtitles_enable', 0, true, false, 'Toggle Minecraft-like subtitles for chatsounds', 0, 1 )
 local sizeCV = CreateClientConVar( 'chatsounds_minecraft_subtitles_size', 2, true, false, 'Sets Minecraft subtitles size', MIN_FONT_SIZE, MAX_FONT_SIZE )
 
+__MINECRAFT_SUBTITLES_FONTS_CACHE = __MINECRAFT_SUBTITLES_FONTS_CACHE or {}
+
 ChatsoundMinecraftSubtitles = {
 	subtitles = {},
 
-	fontName = 'ChatsoundMinecraftSubtitles',
+	fontName = 'DermaDefault',
 	fontScale = 12,
 	fontHeight = -1, -- calculated
 
@@ -137,26 +140,31 @@ end
 function ChatsoundMinecraftSubtitles:calcScales()
 	local size = sizeCV:GetInt()
 	local fontSize = self.fontScale * size
+	self.fontName = FONT_NAME .. fontSize
 	self.shadowOffset = self.shadowOffsetScale * size
 
-	surface.CreateFont( self.fontName, {
-		-- On Windows/macOS, use the font-name which is shown to you by your operating system Font Viewer. On Linux, use the file name
-		font = system.IsLinux() and "MinecraftRegular.ttf" or "Minecraft",
-		extended = true,
-		size = fontSize,
-		weight = 100,
-		blursize = 0,
-		scanlines = 0,
-		antialias = false,
-		underline = false,
-		italic = false,
-		strikeout = false,
-		symbol = false,
-		rotary = false,
-		shadow = false,
-		additive = false,
-		outline = false,
-	})
+	if !__MINECRAFT_SUBTITLES_FONTS_CACHE[self.fontName] then
+		__MINECRAFT_SUBTITLES_FONTS_CACHE[self.fontName] = true
+
+		surface.CreateFont( self.fontName, {
+			-- On Windows/macOS, use the font-name which is shown to you by your operating system Font Viewer. On Linux, use the file name
+			font = system.IsLinux() and "MinecraftRegular.ttf" or "Minecraft",
+			extended = true,
+			size = fontSize,
+			weight = 100,
+			blursize = 0,
+			scanlines = 0,
+			antialias = false,
+			underline = false,
+			italic = false,
+			strikeout = false,
+			symbol = false,
+			rotary = false,
+			shadow = false,
+			additive = false,
+			outline = false,
+		})
+	end
 
 	timer.Simple( 0, function()
 		surface.SetFont( self.fontName )
