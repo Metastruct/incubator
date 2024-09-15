@@ -25,7 +25,8 @@ local function scrollString( str, offset )
 end
 
 ChatsoundMinecraftSubtitles = {
-	subtitles = {},
+	subtitleMap = {},
+	subtitleSeq = {},
 
 	fontName = 'DermaDefault',
 	fontScale = 12,
@@ -59,7 +60,7 @@ ChatsoundMinecraftSubtitles = {
 			local soundName = meta["Key"]
 			local id = "%s:%s" % { ply:UserID(), meta["Key"] }
 
-			local subtitle = self.subtitles[id]
+			local subtitle = self.subtitleMap[id]
 
 			if !subtitle then
 				subtitle = {
@@ -68,7 +69,8 @@ ChatsoundMinecraftSubtitles = {
 					nextChar = CurTime() + CHAR_SCROLL_INTERVAL,
 				}
 
-				self.subtitles[id] = subtitle
+				self.subtitleMap[id] = subtitle
+				table.insert( self.subtitleSeq, subtitle )
 			end
 
 			subtitle.deadline = CurTime() + math.min( sound_data['Duration'], 60 )
@@ -87,10 +89,11 @@ ChatsoundMinecraftSubtitles = {
 
 			self:setMinecraftFont()
 
-			for k, subtitle in pairs( self.subtitles ) do
+			for index, subtitle in ipairs( self.subtitleSeq ) do
 				if subtitle.deadline < now then
 					if subtitle.deadline + self.fadeOutDuration < now then
-						self.subtitles[k] = nil
+						self.subtitleMap[subtitle.id] = nil
+						table.remove( self.subtitleSeq, index )
 						continue
 					end
 
@@ -107,20 +110,20 @@ ChatsoundMinecraftSubtitles = {
 			end
 
 			local w = self.minStaticWidth + widestName
-			local h = table.Count( self.subtitles ) * self.fontHeight
+			local h = #self.subtitleSeq * self.fontHeight
 			x = x - w
 			y = y - h
 
 			surface.SetDrawColor( self.backgroundColor.r, self.backgroundColor.g, self.backgroundColor.b, self.backgroundColor.a )
 			surface.DrawRect( x, y, w, h )
 
-			local i = 0
 			local myPos = LocalPlayer():GetShootPos()
 			local yaw = LocalPlayer():EyeAngles().yaw
 
-			for k, subtitle in pairs( self.subtitles ) do
+			for index, subtitle in ipairs( self.subtitleSeq ) do
 				local direction = subtitle.position - LocalPlayer():GetShootPos()
 				local angle = 180
+				local i = #self.subtitleSeq - index
 
 				if direction:Length2DSqr() > self.minDistance2 then
 					angle = math.Round( yaw - direction:Angle().yaw ) % 360
@@ -142,8 +145,6 @@ ChatsoundMinecraftSubtitles = {
 
 				local center = ( widestName - subtitle.width ) / 2
 				self:drawMinecraftText( subtitle.name, x + self.padding + self.leftArrowWidth + self.gap + center, y + i * self.fontHeight, subtitle.alpha )
-
-				i = i + 1
 			end
 		end,
 	}
