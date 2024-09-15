@@ -44,18 +44,23 @@ ChatsoundMinecraftSubtitles = {
 	hookName = 'ChatsoundMinecraftSubtitles',
 	hooks = {
 		ChatsoundsSoundInit = function( self, ply, snd, sound_data, meta )
-			local playerName = string.sub( ply:Name(), 1, 20 )
-			local soundName = string.sub( meta["Key"], 1, 20 )
-			local id = "%s: %s" % { playerName, soundName }
+			local playerName = ply:Name()
+			local soundName = meta["Key"]
+			local id = "%s:%s" % { ply:UserID(), meta["Key"] }
 
-			local subtitles = self.subtitles
-			subtitles[id] = subtitles[id] or {}
-			subtitles[id].deadline = CurTime() + math.min( sound_data['Duration'], 60 )
-			subtitles[id].position = ply:GetShootPos()
-			subtitles[id].alpha = 255
-			subtitles[id].count = ( subtitles[id].count or 0 ) + 1
-			subtitles[id].name = subtitles[id].count > 1
-				and '%s (x%i)' % { id, subtitles[id].count }
+			local subtitle = self.subtitles[id]
+
+			if !subtitle then
+				subtitle = {}
+				self.subtitles[id] = subtitle
+			end
+
+			subtitle.deadline = CurTime() + math.min( sound_data['Duration'], 60 )
+			subtitle.position = ply:GetShootPos()
+			subtitle.alpha = 255
+			subtitle.count = ( subtitle.count or 0 ) + 1
+			subtitle.name = subtitle.count > 1
+				and '%s (x%i)' % { id, subtitle.count }
 				 or id
 		end,
 		HUDPaint = function( self )
@@ -65,18 +70,18 @@ ChatsoundMinecraftSubtitles = {
 
 			self:setMinecraftFont()
 
-			for k, s in pairs( self.subtitles ) do
-				if s.deadline < now then
-					if s.deadline + self.fadeOutDuration < now then
+			for k, subtitle in pairs( self.subtitles ) do
+				if subtitle.deadline < now then
+					if subtitle.deadline + self.fadeOutDuration < now then
 						self.subtitles[k] = nil
 						continue
 					end
 
-					self.subtitles[k].alpha = ( 1 - ( now - s.deadline ) / self.fadeOutDuration ) * 255
+					subtitle.alpha = ( 1 - ( now - subtitle.deadline ) / self.fadeOutDuration ) * 255
 				end
 
-				s.width = surface.GetTextSize( s.name )
-				widestName = math.max( widestName, s.width )
+				subtitle.width = surface.GetTextSize( subtitle.name )
+				widestName = math.max( widestName, subtitle.width )
 			end
 
 			local w = self.minStaticWidth + widestName
@@ -91,8 +96,8 @@ ChatsoundMinecraftSubtitles = {
 			local myPos = LocalPlayer():GetShootPos()
 			local yaw = LocalPlayer():EyeAngles().yaw
 
-			for k, s in pairs( self.subtitles ) do
-				local direction = s.position - LocalPlayer():GetShootPos()
+			for k, subtitle in pairs( self.subtitles ) do
+				local direction = subtitle.position - LocalPlayer():GetShootPos()
 				local angle = 180
 
 				if direction:Length2DSqr() > self.minDistance2 then
@@ -105,16 +110,16 @@ ChatsoundMinecraftSubtitles = {
 
 				-- if angle < -self.minAngle or angle > ( 180 - self.minAngle ) then
 				if angle == 180 or angle < -self.minAngle then
-					self:drawMinecraftText( self.leftArrow, x + self.padding, y + i * self.fontHeight, s.alpha )
+					self:drawMinecraftText( self.leftArrow, x + self.padding, y + i * self.fontHeight, subtitle.alpha )
 				end
 
 				-- if angle > self.minAngle or angle < -( 180 - self.minAngle ) then
 				if angle == 180 or angle > self.minAngle then
-					self:drawMinecraftText( self.rightArrow, x + w - self.padding - self.rightArrowWidth, y + i * self.fontHeight, s.alpha )
+					self:drawMinecraftText( self.rightArrow, x + w - self.padding - self.rightArrowWidth, y + i * self.fontHeight, subtitle.alpha )
 				end
 
-				local center = ( widestName - s.width ) / 2
-				self:drawMinecraftText( s.name, x + self.padding + self.leftArrowWidth + self.gap + center, y + i * self.fontHeight, s.alpha )
+				local center = ( widestName - subtitle.width ) / 2
+				self:drawMinecraftText( subtitle.name, x + self.padding + self.leftArrowWidth + self.gap + center, y + i * self.fontHeight, subtitle.alpha )
 
 				i = i + 1
 			end
