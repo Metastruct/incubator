@@ -7,11 +7,22 @@ end
 local FONT_NAME = 'ChatsoundMinecraftSubtitles'
 local MIN_FONT_SIZE = 1
 local MAX_FONT_SIZE = 8
+local VISIBLE_CHARS = 20
+local CHAR_SCROLL_INTERVAL = 0.25
 
 local enabledCV = CreateClientConVar( 'chatsounds_minecraft_subtitles_enable', 0, true, false, 'Toggle Minecraft-like subtitles for chatsounds', 0, 1 )
 local sizeCV = CreateClientConVar( 'chatsounds_minecraft_subtitles_size', 2, true, false, 'Sets Minecraft subtitles size', MIN_FONT_SIZE, MAX_FONT_SIZE )
 
 __MINECRAFT_SUBTITLES_FONTS_CACHE = __MINECRAFT_SUBTITLES_FONTS_CACHE or {}
+
+local function scrollString( str, offset )
+	local length = utf8.len( str )
+	local extraChars = length - VISIBLE_CHARS
+
+	offset = math.Clamp( offset % length - bit.rshift( VISIBLE_CHARS, 2 ), 0, extraChars )
+
+	return string.sub( str, offset + 1, offset + VISIBLE_CHARS )
+end
 
 ChatsoundMinecraftSubtitles = {
 	subtitles = {},
@@ -51,17 +62,23 @@ ChatsoundMinecraftSubtitles = {
 			local subtitle = self.subtitles[id]
 
 			if !subtitle then
-				subtitle = {}
+				subtitle = {
+					id = id,
+					offset = 0,
+					nextChar = CurTime() + CHAR_SCROLL_INTERVAL,
+				}
+
 				self.subtitles[id] = subtitle
 			end
 
 			subtitle.deadline = CurTime() + math.min( sound_data['Duration'], 60 )
 			subtitle.position = ply:GetShootPos()
 			subtitle.alpha = 255
+			subtitle.playerName = playerName
+			subtitle.soundName = soundName
 			subtitle.count = ( subtitle.count or 0 ) + 1
-			subtitle.name = subtitle.count > 1
-				and '%s (x%i)' % { id, subtitle.count }
-				 or id
+
+			ChatsoundMinecraftSubtitles:makeName( subtitle )
 		end,
 		HUDPaint = function( self )
 			local now = CurTime()
@@ -78,6 +95,11 @@ ChatsoundMinecraftSubtitles = {
 					end
 
 					subtitle.alpha = ( 1 - ( now - subtitle.deadline ) / self.fadeOutDuration ) * 255
+				end
+
+				if subtitle.nextChar < CurTime() then
+					subtitle.nextChar = CurTime() + CHAR_SCROLL_INTERVAL
+					ChatsoundMinecraftSubtitles:makeName( subtitle )
 				end
 
 				subtitle.width = surface.GetTextSize( subtitle.name )
@@ -196,6 +218,20 @@ function ChatsoundMinecraftSubtitles:toggle()
 			hook.Remove( eventName, self.hookName )
 		end
 	end
+end
+
+function ChatsoundMinecraftSubtitles:makeName( subtitle, doNotMoveOffset )
+	if !doNotMoveOffset then
+		subtitle.offset = subtitle.offset + 1
+	end
+
+	local playerName = string.sub( subtitle.playerName, 1, VISIBLE_CHARS )
+	local soundName = scrollString( subtitle.soundName, subtitle.offset )
+	local name = string.format( '%s: %s', playerName, soundName )
+
+	subtitle.name = subtitle.count > 1
+		and string.format( '%s (x%i)', name, subtitle.count )
+		 or name
 end
 
 function ChatsoundMinecraftSubtitles:setMinecraftFont()
