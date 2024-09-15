@@ -89,24 +89,32 @@ ChatsoundMinecraftSubtitles = {
 
 			self:setMinecraftFont()
 
-			for index, subtitle in ipairs( self.subtitleSeq ) do
-				if subtitle.deadline < now then
-					if subtitle.deadline + self.fadeOutDuration < now then
-						self.subtitleMap[subtitle.id] = nil
-						table.remove( self.subtitleSeq, index )
-						continue
+			do
+				local index = 0
+
+				while index < #self.subtitleSeq do
+					index = index + 1
+					local subtitle = self.subtitleSeq[index]
+
+					if subtitle.deadline < now then
+						if subtitle.deadline + self.fadeOutDuration < now then
+							self.subtitleMap[subtitle.id] = nil
+							table.remove( self.subtitleSeq, index )
+							index = index - 1
+							continue
+						end
+
+						subtitle.alpha = ( 1 - ( now - subtitle.deadline ) / self.fadeOutDuration ) * 255
 					end
 
-					subtitle.alpha = ( 1 - ( now - subtitle.deadline ) / self.fadeOutDuration ) * 255
-				end
+					if subtitle.nextChar < CurTime() then
+						subtitle.nextChar = CurTime() + CHAR_SCROLL_INTERVAL
+						ChatsoundMinecraftSubtitles:makeName( subtitle )
+					end
 
-				if subtitle.nextChar < CurTime() then
-					subtitle.nextChar = CurTime() + CHAR_SCROLL_INTERVAL
-					ChatsoundMinecraftSubtitles:makeName( subtitle )
+					subtitle.width = surface.GetTextSize( subtitle.name )
+					widestName = math.max( widestName, subtitle.width )
 				end
-
-				subtitle.width = surface.GetTextSize( subtitle.name )
-				widestName = math.max( widestName, subtitle.width )
 			end
 
 			local w = self.minStaticWidth + widestName
