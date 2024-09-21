@@ -11,7 +11,8 @@ local VISIBLE_CHARS = 20
 local CHAR_SCROLL_INTERVAL = 0.25
 
 local enabledCV = CreateClientConVar( 'chatsounds_minecraft_subtitles_enable', 0, true, false, 'Toggle Minecraft-like subtitles for chatsounds', 0, 1 )
-local sizeCV = CreateClientConVar( 'chatsounds_minecraft_subtitles_size', 2, true, false, 'Sets Minecraft subtitles size', MIN_FONT_SIZE, MAX_FONT_SIZE )
+local sizeCV = CreateClientConVar( 'chatsounds_minecraft_subtitles_size', 2, true, false, 'Minecraft subtitles size', MIN_FONT_SIZE, MAX_FONT_SIZE )
+local decayDurationCV = CreateClientConVar( 'chatsounds_minecraft_subtitles_decay_duration', 2, true, false, 'Minecraft subtitles decay duration after a chatsound ends', 0, 10 )
 
 __MINECRAFT_SUBTITLES_FONTS_CACHE = __MINECRAFT_SUBTITLES_FONTS_CACHE or {}
 
@@ -68,7 +69,7 @@ ChatsoundMinecraftSubtitles = {
 	minAngle = 30,
 	minDistance = 10,
 	minDistance2 = -1, -- calculated
-	fadeOutDuration = 2,
+	decayDuration = -1,  -- calculated
 
 	hookName = 'ChatsoundMinecraftSubtitles',
 	hooks = {
@@ -117,14 +118,14 @@ ChatsoundMinecraftSubtitles = {
 					local subtitle = self.subtitleSeq[index]
 
 					if subtitle.deadline < now then
-						if subtitle.deadline + self.fadeOutDuration < now then
+						if subtitle.deadline + self.decayDuration < now then
 							self.subtitleMap[subtitle.id] = nil
 							table.remove( self.subtitleSeq, index )
 							index = index - 1
 							continue
 						end
 
-						subtitle.alpha = ( 1 - ( now - subtitle.deadline ) / self.fadeOutDuration ) * 255
+						subtitle.alpha = ( 1 - ( now - subtitle.deadline ) / self.decayDuration ) * 255
 					end
 
 					if subtitle.nextChar < CurTime() then
@@ -182,6 +183,7 @@ function ChatsoundMinecraftSubtitles:init()
 	self.minDistance2 = self.minDistance * self.minDistance
 
 	self:calcScales()
+	self:cacheDecayDuration()
 	self:toggle()
 
 	cvars.AddChangeCallback( 'chatsounds_minecraft_subtitles_enable', function( _, oldValue, value )
@@ -191,6 +193,24 @@ function ChatsoundMinecraftSubtitles:init()
 	cvars.AddChangeCallback( 'chatsounds_minecraft_subtitles_size', function( _, oldValue, value )
 		self:calcScales()
 	end, 'chatsounds_minecraft_subtitles_size' )
+
+	cvars.AddChangeCallback( 'chatsounds_minecraft_subtitles_decay_duration', function( _, oldValue, value )
+		self:cacheDecayDuration()
+	end, 'chatsounds_minecraft_subtitles_decay_duration' )
+end
+
+function ChatsoundMinecraftSubtitles:toggle()
+	local isEnabled = enabledCV:GetBool()
+
+	for eventName, callback in pairs( self.hooks ) do
+		if isEnabled then
+			hook.Add( eventName, self.hookName, function( ... )
+				callback( self, ... )
+			end )
+		else
+			hook.Remove( eventName, self.hookName )
+		end
+	end
 end
 
 function ChatsoundMinecraftSubtitles:calcScales()
@@ -235,18 +255,8 @@ function ChatsoundMinecraftSubtitles:calcScales()
 	end )
 end
 
-function ChatsoundMinecraftSubtitles:toggle()
-	local isEnabled = enabledCV:GetBool()
-
-	for eventName, callback in pairs( self.hooks ) do
-		if isEnabled then
-			hook.Add( eventName, self.hookName, function( ... )
-				callback( self, ... )
-			end )
-		else
-			hook.Remove( eventName, self.hookName )
-		end
-	end
+function ChatsoundMinecraftSubtitles:cacheDecayDuration()
+	self.decayDuration = decayDurationCV:GetInt()
 end
 
 function ChatsoundMinecraftSubtitles:makeName( subtitle, doNotMoveOffset )
