@@ -24,6 +24,23 @@ local function scrollString( str, offset )
 	return string.sub( str, offset + 1, offset + VISIBLE_CHARS )
 end
 
+local function makeModifiersMap( modifiers )
+	local map = {}
+
+	for _, m in ipairs( modifiers ) do
+		local name = m["Name"]
+		local value = m["Value"]
+
+		if m["IsLegacy"] then
+			name = string.sub( name, 8 )
+		end
+
+		map[name] = value
+	end
+
+	return map
+end
+
 ChatsoundMinecraftSubtitles = {
 	subtitleMap = {},
 	subtitleSeq = {},
@@ -57,9 +74,12 @@ ChatsoundMinecraftSubtitles = {
 	hooks = {
 		ChatsoundsSoundInit = function( self, ply, snd, sound_data, meta )
 			local playerName = ply:Name()
-			local soundName = meta["Key"]
-			local id = "%s:%s" % { ply:UserID(), meta["Key"] }
+			local modifiers = makeModifiersMap( meta["Modifiers"] )
+			local soundName = modifiers.select
+				and "%s#%s" % { meta["Key"], modifiers.select }
+				 or meta["Key"]
 
+			local id = "%s:%s" % { ply:UserID(), soundName }
 			local subtitle = self.subtitleMap[id]
 
 			if !subtitle then
