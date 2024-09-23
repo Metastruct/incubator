@@ -18,7 +18,7 @@ __MINECRAFT_SUBTITLES_FONTS_CACHE = __MINECRAFT_SUBTITLES_FONTS_CACHE or {}
 
 local function scrollString( str, offset )
 	local length = utf8.len( str )
-	local extraChars = length - VISIBLE_CHARS
+	local extraChars = math.max( length - VISIBLE_CHARS, 0 )
 
 	offset = math.Clamp( offset % length - bit.rshift( VISIBLE_CHARS, 2 ), 0, extraChars )
 
