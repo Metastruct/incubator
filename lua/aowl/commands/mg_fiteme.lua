@@ -404,7 +404,7 @@ fiteme_init = function(pl1, pl2)
 
 	for pl, _ in players() do
 		local eligible, reason = is_eligible(pl)
-		print("is_eligible", pl, "bad=", bad)
+		--print("is_eligible", pl, "bad=", bad) -- this is printing non-stop, stop harvesting the terminal for useless shit ty
 		if eligible == false then return false, reason or "is_eligible", pl end
 	end
 
