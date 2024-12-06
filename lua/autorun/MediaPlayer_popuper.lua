@@ -4,6 +4,8 @@ if !CLIENT then return end
 local EASE = 0.2
 local FONT = 'Trebuchet24'
 local FONT_HEIGHT = draw.GetFontHeight( FONT )
+local UNSUB_DISTANT_CONVAR = "mediaplayer_proximity"
+local UNSUB_DISTANT_DESCRIPTION = string.format( "Unsub. from distant media players (%s)", UNSUB_DISTANT_CONVAR )
 local MUTE_UNFOCUSED_CONVAR = "mediaplayer_mute_unfocused"
 local MUTE_UNFOCUSED_DESCRIPTION = string.format( "Mute distant media players (%s)", MUTE_UNFOCUSED_CONVAR )
 local MP_POPUPER_HIDE_ON_SCREENSHOTS_CONVAR = "mp_popuper_hide_on_screenshots"
@@ -687,6 +689,13 @@ mp_popuper = {
 				renderPopupsInScreenshots.frame:DockPadding( 0, 5, 0, 5 )
 				renderPopupsInScreenshots.frame.Paint = nil
 
+				do // Render Popups In Screenshots Label
+					renderPopupsInScreenshots.label = vgui.Create( 'DLabel', renderPopupsInScreenshots.frame )
+					renderPopupsInScreenshots.label:SetText( MP_POPUPER_HIDE_ON_SCREENSHOTS_DESCRIPTION )
+					renderPopupsInScreenshots.label:DockMargin( 0, 0, 5, 0 )
+					renderPopupsInScreenshots.label:Dock( FILL )
+				end
+
 				do // Render Popups In Screenshots Checkbox
 					renderPopupsInScreenshots.checkbox = vgui.Create( 'DCheckBox', renderPopupsInScreenshots.frame )
 					renderPopupsInScreenshots.checkbox:SetValue( hidePopupOnScreenshotsConVar:GetBool() )
@@ -704,16 +713,39 @@ mp_popuper = {
 						end
 					end
 				end
+			end
 
-				do // Render Popups In Screenshots Label
-					renderPopupsInScreenshots.label = vgui.Create( 'DLabel', renderPopupsInScreenshots.frame )
-					renderPopupsInScreenshots.label:SetText( MP_POPUPER_HIDE_ON_SCREENSHOTS_DESCRIPTION )
-					renderPopupsInScreenshots.label:DockMargin( 0, 0, 5, 0 )
-					renderPopupsInScreenshots.label:Dock( FILL )
+			local unsubDistantCV = GetConVar( UNSUB_DISTANT_CONVAR )
+
+			if unsubDistantCV then // Unsub From Distant Toggle
+				local unsubDistant = {}
+				frame.unsubDistant = unsubDistant
+
+				unsubDistant.frame = vgui.Create( 'DPanel', frame.footerFrame )
+				unsubDistant.frame:DockPadding( 0, 5, 0, 5 )
+				unsubDistant.frame.Paint = nil
+
+				do // Mute Unfocused Label
+					unsubDistant.label = vgui.Create( 'DLabel', unsubDistant.frame )
+					unsubDistant.label:SetText( UNSUB_DISTANT_DESCRIPTION )
+					unsubDistant.label:DockMargin( 0, 0, 5, 0 )
+					unsubDistant.label:Dock( FILL )
+				end
+
+				do // Mute Unfocused Checkbox
+					unsubDistant.checkbox = vgui.Create( 'DCheckBox', unsubDistant.frame )
+					unsubDistant.checkbox:SetValue( unsubDistantCV:GetBool() )
+					unsubDistant.checkbox:Dock( RIGHT )
+
+					function unsubDistant.checkbox:OnChange( value )
+						unsubDistantCV:SetBool( value )
+					end
 				end
 			end
 
-			do // Mute Unfocused Toggle
+			local muteUnfocusedCV = GetConVar( MUTE_UNFOCUSED_CONVAR )
+
+			if muteUnfocusedCV then // Mute Unfocused Toggle
 				local muteUnfocused = {}
 				frame.muteUnfocused = muteUnfocused
 
@@ -721,21 +753,21 @@ mp_popuper = {
 				muteUnfocused.frame:DockPadding( 0, 5, 0, 5 )
 				muteUnfocused.frame.Paint = nil
 
-				do // Mute Unfocused Checkbox
-					muteUnfocused.checkbox = vgui.Create( 'DCheckBox', muteUnfocused.frame )
-					muteUnfocused.checkbox:SetValue( GetConVar( MUTE_UNFOCUSED_CONVAR ):GetBool() )
-					muteUnfocused.checkbox:Dock( RIGHT )
-
-					function muteUnfocused.checkbox:OnChange( value )
-						GetConVar( MUTE_UNFOCUSED_CONVAR ):SetBool( value )
-					end
-				end
-
 				do // Mute Unfocused Label
 					muteUnfocused.label = vgui.Create( 'DLabel', muteUnfocused.frame )
 					muteUnfocused.label:SetText( MUTE_UNFOCUSED_DESCRIPTION )
 					muteUnfocused.label:DockMargin( 0, 0, 5, 0 )
 					muteUnfocused.label:Dock( FILL )
+				end
+
+				do // Mute Unfocused Checkbox
+					muteUnfocused.checkbox = vgui.Create( 'DCheckBox', muteUnfocused.frame )
+					muteUnfocused.checkbox:SetValue( muteUnfocusedCV:GetBool() )
+					muteUnfocused.checkbox:Dock( RIGHT )
+
+					function muteUnfocused.checkbox:OnChange( value )
+						muteUnfocusedCV:SetBool( value )
+					end
 				end
 			end
 
