@@ -73,14 +73,15 @@ ChatsoundMinecraftSubtitles = {
 
 	hookName = 'ChatsoundMinecraftSubtitles',
 	hooks = {
-		ChatsoundsSoundInit = function( self, ply, snd, sound_data, meta )
-			local playerName = ply:Name()
+		ChatsoundsSoundInit = function( self, ent, snd, sound_data, meta )
+			local isPlayer = ent:IsPlayer()
+			local playerName = isPlayer and ent:Name() or ent:GetClass()
 			local modifiers = makeModifiersMap( meta["Modifiers"] )
 			local soundName = modifiers.select
 				and "%s#%s" % { meta["Key"], modifiers.select }
 				 or meta["Key"]
 
-			local id = "%s:%s" % { ply:UserID(), soundName }
+			local id = "%s:%s" % { ent:EntIndex(), soundName }
 			local subtitle = self.subtitleMap[id]
 
 			if !subtitle then
@@ -95,7 +96,7 @@ ChatsoundMinecraftSubtitles = {
 			end
 
 			subtitle.deadline = CurTime() + math.min( sound_data['Duration'], 60 )
-			subtitle.position = ply:GetShootPos()
+			subtitle.position = isPlayer and ent:GetShootPos() or ent:GetPos()
 			subtitle.alpha = 255
 			subtitle.playerName = playerName
 			subtitle.soundName = soundName
