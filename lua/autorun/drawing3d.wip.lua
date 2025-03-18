@@ -103,8 +103,11 @@ hook.Add("HUDPaint", Tag, function()
 end)
 
 hook.Add("Tick", Tag, function()
-	local tr = LocalPlayer():GetEyeTrace()
-	drawpos_want = LocalPlayer():KeyDown(IN_SPEED) and tr.HitPos + tr.HitNormal * 1 or LocalPlayer():GetAimVector() * 48 + LocalPlayer():GetShootPos()
+	local pl = LocalPlayer()
+	if not pl:IsValid() then return end 
+		
+	local tr = pl:GetEyeTrace()
+	drawpos_want = pl:KeyDown(IN_SPEED) and tr.HitPos + tr.HitNormal * 1 or pl:GetAimVector() * 48 + pl:GetShootPos()
 
 	if not drawpos_last then
 		drawpos_last = drawpos_want
