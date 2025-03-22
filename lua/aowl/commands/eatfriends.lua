@@ -11,12 +11,10 @@ if SERVER then
 	if aowl then
 		local maxRange = 196 ^ 2
 		local dmgType = {
-            [1] = true, -- God Mode
-            [2] = true, -- No Player Damage
-            [4] = true, -- Buddha Mode
-            [5] = true, -- Godded players can't hurt you
-            [6] = true, -- Shop NPC mode
-        }
+			[1] = true, -- God Mode
+			[2] = true, -- No Player Damage
+			[6] = true, -- Shop NPC mode
+		}
 		local function CanEatPlayer(caller, targetPlayer)
 			if not IsValid(targetPlayer) or not targetPlayer:IsPlayer() then
 				return false, "That is not a player."
@@ -32,14 +30,18 @@ if SERVER then
 				end
 
 				local friendOnly = targetPlayer:GetInfoNum("eating_friends_only_command", 1) == 1
-				if friendOnly and friendsh.GetFriendStatus(caller:UserID(), targetPlayer:UserID()) ~= "friends" then
+				if friendOnly and not caller:AreFriends(targetPlayer) then
 					return false, "The player only allows friends to eat them."
 				end
 
-                local dmgMode = targetPlayer:GetInfoNum("cl_dmg_mode", 0)
-                if targetPlayer:HasGodMode() or dmgType[dmgMode] then
-                    return false, "The player is in a protected state and cannot be eaten."
-                end
+				local dmgMode = targetPlayer:GetInfoNum("cl_dmg_mode", 0)
+				if targetPlayer:HasGodMode() or dmgType[dmgMode] then
+					return false, "The player is in a protected state and cannot be eaten."
+				end
+
+				if not targetPlayer:Alive() then
+					return false, "The player is not alive and cannot be eaten."
+				end
 			end
 			return true
 		end
