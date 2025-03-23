@@ -16,26 +16,34 @@ MetaBadges.RegisterBadge(id, {
 	level_interpolation = MetaBadges.INTERPOLATION_FLOOR
 })
 
-hook.Add("PlayerEnteredVehicle", "%s_%s" % {Tag, id}, function(pl, veh)
-	if not (IsValid(pl) and IsValid(veh)) then return end
-	if not pl.IsPlayerSittingOn then return end
-	if veh:GetClass() ~= "prop_vehicle_prisoner_pod" then return end
-	-- veh.IsSitVehicle: aowl/commands/easy_sit_on_player.lua:81
-	-- veh.playerdynseat: sitanywhere/server/sit.lua:76
-	if not (veh.IsSitVehicle or veh.playerdynseat) then return end
+local function IsCustomSeat(seat)
+	-- seat.IsSitVehicle: aowl/commands/easy_sit_on_player.lua:81
+	-- seat.playerdynseat: sitanywhere/server/sit.lua:76
+	return seat:GetClass() == "prop_vehicle_prisoner_pod" and (seat.IsSitVehicle or seat.playerdynseat)
+end
 
-	-- Idk if bots have badges, exclude them just in case
-	for _, pl_iter in ipairs(player.GetHumans()) do
-		-- Skip anyone who's not part of the tower
-		-- sitanywhere/helpers.lua:153
-		if not pl:IsPlayerSittingOn(pl_iter) then continue end
+local function FindRootPlayer(seat, depth)
+	depth = (depth or 0) + 1
 
-		-- sitanywhere/helpers.lua:116
-		local sitters = pl_iter:GetSitters()
-		local sits_count = table.Count(sitters)
-		local cur_level = MetaBadges.GetBadgeLevel(pl_iter, id) or 0
-
-		if cur_level >= sits_count then continue end
-		MetaBadges.UpgradeBadge(pl_iter, id, sits_count)
+	local parent = seat:GetParent()
+	if IsValid(seat) and IsCustomSeat(seat) and depth <= 64 then
+		return FindRootPlayer(parent, depth)
 	end
+	if IsValid(seat) and seat:IsPlayer() and not IsValid(parent) then
+		return seat
+	end
+end
+
+hook.Add("PlayerEnteredVehicle", Tag .. "_" .. id, function(_, veh)
+	if not IsValid(veh) then return end
+	if not IsCustomSeat(veh) then return end
+
+	local root_player = FindRootPlayer(veh)
+	-- sitanywhere/helpers.lua:116
+	local sitters = root_player:GetSitters()
+	local sits_count = table.Count(sitters)
+	local cur_level = MetaBadges.GetBadgeLevel(root_player, id) or 0
+
+	if cur_level >= sits_count then return end
+	MetaBadges.UpgradeBadge(root_player, id, sits_count, MetaBadges.VARIANT_SILENT)
 end)
