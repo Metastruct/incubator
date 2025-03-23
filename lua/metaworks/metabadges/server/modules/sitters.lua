@@ -26,7 +26,7 @@ local function FindRootPlayer(seat, depth)
 	depth = (depth or 0) + 1
 
 	local parent = seat:GetParent()
-	if IsValid(seat) and IsCustomSeat(seat) and depth <= 64 then
+	if IsValid(seat) and IsCustomSeat(seat) and depth <= 64 and IsValid(parent) then
 		return FindRootPlayer(parent, depth)
 	end
 	if IsValid(seat) and seat:IsPlayer() and not IsValid(parent) then
@@ -39,6 +39,8 @@ hook.Add("PlayerEnteredVehicle", Tag .. "_" .. id, function(_, veh)
 	if not IsCustomSeat(veh) then return end
 
 	local root_player = FindRootPlayer(veh)
+	-- Player sit on world or prop
+	if not IsValid(root_player) then return end
 	-- sitanywhere/helpers.lua:116
 	local sitters = root_player:GetSitters()
 	local sits_count = table.Count(sitters)
