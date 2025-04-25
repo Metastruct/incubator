@@ -29,7 +29,7 @@ local function FindRootPlayer(seat, depth)
 	if IsValid(seat) and IsCustomSeat(seat) and depth <= 64 and IsValid(parent) then
 		return FindRootPlayer(parent, depth)
 	end
-	if IsValid(seat) and seat:IsPlayer() and not IsValid(parent) then
+	if seat and seat:IsPlayer() and not IsValid(parent) then
 		return seat
 	end
 end
