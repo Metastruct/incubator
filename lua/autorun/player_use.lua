@@ -1,4 +1,7 @@
 local Tag = 'playerusehook'
+--TODO: 
+-- - Add easychat integration (show in history only)
+-- - highlight who used you for 10 seconds
 
 if SERVER then
 	util.AddNetworkString(Tag)
@@ -78,7 +81,7 @@ local rp_react_to_use_notification = CreateClientConVar("rp_react_to_use_notific
 local rp_react_to_use_notification_sound = CreateClientConVar("rp_react_to_use_notification_sound", "physics/wood/wood_furniture_impact_soft1.wav", true, false, "Notification sound to play to you. Empty to disable.")
 local rp_react_to_use_only_afk = CreateClientConVar("rp_react_to_use_only_afk", "0", true, false, "1=Only react if AFK", 0, 1)
 local rp_react_to_use_notification_every = CreateClientConVar("rp_react_to_use_notification_every", "3", true, false, "Only allow pressing every N seconds per player", 0, 1)
-local rp_react_to_use_notification_in_chat = CreateClientConVar("rp_react_to_use_notification_in_chat", "0", true, false, "0=notification 1=chat message", 0, 1)
+local rp_react_to_use_notification_in_chat = CreateClientConVar("rp_react_to_use_notification_in_chat", "1", true, false, "0=notification 1=chat message", 0, 1)
 local rp_react_to_use_do_not_move = CreateClientConVar("rp_react_to_use_do_not_move", "0", true, false, "Only look towards player instead of moving away", 0, 1)
 local ratelimit = 0
 local ratelimit_msg = 0
@@ -171,12 +174,14 @@ local function PlayerUsedByPlayer(initator)
 			if use_chat then
 				chat.AddText(initator, WHITE, " wants your attention!")
 			else
+				Msg"[PlayerUse] " MsgC(initator, WHITE, " wants your attention!\n")
 				notification.AddLegacy(initator:GetName() .. " wants your attention!", NOTIFY_GENERIC, 5)
 			end
 		else
 			if use_chat then
 				chat.AddText(initator, WHITE, " tapped on your shoulder!")
 			else
+				Msg"[PlayerUse] " MsgC(initator, WHITE, " tapped on your shoulder!\n")
 				notification.AddLegacy(initator:GetName() .. " tapped on your shoulder!", NOTIFY_GENERIC, 5)
 			end
 		end
