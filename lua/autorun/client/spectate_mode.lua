@@ -1,7 +1,7 @@
 -- Spectate Mode + Freecam
+
 -- Mimics Counter-Strike spectating with delays: cycle players (left/right click), toggle freecam (reload), toggle 1st/3rd person (space).
 
-if CLIENT then
     -- Configuration
     local spectateEnabled = false
     local spectateTargets = {}
@@ -181,4 +181,4 @@ if CLIENT then
         surface.SetTextPos((ScrW()-iw)/2, ScrH()-ih-10)
         surface.DrawText(instr)
     end)
-end
+
