@@ -1,6 +1,6 @@
 -- Trigger via !speedtestgui, /speedtestgui or .speedtestgui in chat
 
-if CLIENT then
+
 
     local function OpenSpeedTest()
         local frame = vgui.Create("DFrame")
@@ -40,4 +40,4 @@ if CLIENT then
         end
     end)
 
-end
+
