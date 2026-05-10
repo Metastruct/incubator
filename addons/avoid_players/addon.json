@@ -1,0 +1,11 @@
+{
+	"title" : "Player Avoidance Script",
+	"type" : "tool",
+	"tags" : [ "roleplay", "fun" ],
+	"ignore" : [
+		"*.psd",
+		"*.vcproj",
+		"*.git*",
+		"*.bat"
+	]
+}
