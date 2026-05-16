@@ -1,8 +1,20 @@
 local Tag = "capsadmin"
+local bot_capsadmin = CreateConVar("bot_capsadmin", "0", FCVAR_ARCHIVE, "1 = all bots are capsadmin, 2=specified bots are capsadmin (TODO)")
+
+--  Follow: use a bot to make it follow you (5s duration, faces you)
+--  Chat trigger: mention a bot's name in chat within 100 units to activate it
+--  Attack response: bots counter-attack when hurt (crowbar, 5s chase, 10s cooldown) (overrides godmode)
+--  Auto-revive: dead bots respawn after 10s via Revive or KillSilent+Spawn
+--  Random events: bots randomly switch weapons, jump, or attack (every 10-40s)
+--  Delayed reactions: use/chat responses are delayed 0.1-1s, with 10% ignore chance; attack has 20% ignore chance
+--  Sentences: bots say weighted random lines (gordon, h, uh, etc.) on activation
+--  Allow rotating players with physgun (qbox only)
+
+require 'hookgroup'
+
 _G.capsadmin = _G.capsadmin or {}
 local capsadmin = _G.capsadmin
 local DBG = false
-local bot_capsadmin = CreateConVar("bot_capsadmin", "0", FCVAR_ARCHIVE, "1 = all bots are capsadmin, 2=specified bots are capsadmin (TODO)")
 
 local state = setmetatable({}, {
 	__index = function(t, k)
