@@ -291,7 +291,7 @@ function capsadmin.OnPlayerHurt(bot, attacker)
 end
 
 function capsadmin.OnPlayerShouldTakeDamage(bot, attacker)
-	if not attacker:IsBot() then return end
+	if not attacker:IsPlayer() or not attacker:IsBot() then return end
 	local s = state[attacker]
 	if s.target == bot then return true end
 end
