@@ -116,17 +116,17 @@ local function PlayerUsedByPlayer(initator)
 	first_msg = false
 
 	if not rp_react_to_use_mode_friends_only or arefriends then
-		if first or mode == 1 or mode == 2 then
+		if mode == 1 or mode == 2 then
 			if now < ratelimit then return end
 			ratelimit = now + math.Rand(2, 5)
 			local stop_afk = only_afk and LocalPlayer():IsAFK()
 
 			if not stop_afk then
-				if mode == 2 or first then
+				if mode == 2 then
 					RunConsoleCommand("saysound", soundstr or "suit denydevice")
 				end
 
-				if first or rp_react_to_use_do_not_move:GetBool() then
+				if rp_react_to_use_do_not_move:GetBool() then
 					LookAtSmooth(initator, 1)
 				else
 					getStartledBy(initator)
