@@ -53,6 +53,18 @@ local function init()
                                 end)
                         end
 
+                        local search = vgui.Create("DTextEntry", actbar)
+                        search:Dock(LEFT)
+                        search:SetWide(180)
+                        search:SetText("metastruct")
+                        search:SetPlaceholderText("Search workshop...")
+                        search:SetUpdateOnType(false)
+                        search.OnEnter = function(self)
+                                local q = tostring(self:GetValue()):urlencode()
+                                local surl = "https://steamcommunity.com/workshop/browse/?appid=4000&browsesort=textsearch&section=readytouseitems&p=1&num_per_page=30&days=365&searchtext=" .. q .. "&requiredtags%5B%5D=Dupe"
+                                HTML:OpenURL(surl)
+                        end
+
                         local lbl = vgui.Create("DLabel", actbar)
                         lbl:Dock(FILL)
                         lbl:SetText("Browse workshop and click Load This Dupe")
@@ -66,6 +78,12 @@ local function init()
                         HTML = vgui.Create("DHTML", container)
                         HTML:Dock(FILL)
                         nav:SetHTML(HTML)
+
+                        HTML.OnMousePressed = function(self, key)
+                                if key == MOUSE_LEFT then
+                                        self:RequestFocus()
+                                end
+                        end
 
                         HTML.OnFinishLoadingDocument = function(_, url)
                                 local id = ExtractWSID(url)
@@ -82,7 +100,8 @@ local function init()
                                 end
                         end
 
-                        local homeurl = "https://steamcommunity.com/workshop/browse/?appid=4000&browsesort=textsearch&section=readytouseitems&p=1&num_per_page=30&days=7&searchtext=metastruct&requiredtags%5B%5D=Dupe"
+                        local q = tostring(search:GetValue()):urlencode()
+                        local homeurl = "https://steamcommunity.com/workshop/browse/?appid=4000&browsesort=textsearch&section=readytouseitems&p=1&num_per_page=30&days=365&searchtext=" .. q .. "&requiredtags%5B%5D=Dupe"
                         nav.HomeURL = homeurl
                         HTML:OpenURL(homeurl)
                 end
