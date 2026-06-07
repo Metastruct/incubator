@@ -1,34 +1,66 @@
+-- Adapted from https://steamcommunity.com/sharedfiles/filedetails/?id=3585832067
+-- should be server safe now
+-- (tries to be duplicator API compatible)
+local Tag = 'breakabletool'
+
 TOOL.Category = "Destruction"
 TOOL.Name = "Breakable Tool"
--- Default client convars
-TOOL.ClientConVar["gib1"] = ""
-TOOL.ClientConVar["gib2"] = ""
-TOOL.ClientConVar["gib3"] = ""
-TOOL.ClientConVar["gib4"] = ""
-TOOL.ClientConVar["gib5"] = ""
-TOOL.ClientConVar["gib6"] = ""
-TOOL.ClientConVar["gib7"] = ""
-TOOL.ClientConVar["gib8"] = ""
-TOOL.ClientConVar["gib9"] = ""
-TOOL.ClientConVar["gib10"] = ""
-TOOL.ClientConVar["gib11"] = ""
-TOOL.ClientConVar["gib12"] = ""
-TOOL.ClientConVar["gib13"] = ""
-TOOL.ClientConVar["gib14"] = ""
-TOOL.ClientConVar["gib15"] = ""
-TOOL.ClientConVar["gib16"] = ""
-TOOL.ClientConVar["gib17"] = ""
-TOOL.ClientConVar["gib18"] = ""
-TOOL.ClientConVar["gib19"] = ""
-TOOL.ClientConVar["gib20"] = ""
-TOOL.ClientConVar["gib21"] = ""
-TOOL.ClientConVar["gib22"] = ""
-TOOL.ClientConVar["gib23"] = ""
-TOOL.ClientConVar["gib24"] = ""
-TOOL.ClientConVar["gib25"] = ""
+
+
+-- Shared gib presets (used by server when applying breakable and by client UI)
+local GibPresets = {
+	["Default"] = {
+		health = 50,
+		sound = "physics/metal/metal_box_break2.wav",
+		gibs = { "models/gibs/wood_gib01b.mdl", "models/gibs/wood_gib01c.mdl", "models/gibs/wood_gib01d.mdl", "models/gibs/wood_gib01e.mdl", "models/gibs/wood_gib01b.mdl", "models/gibs/wood_gib01c.mdl", "models/gibs/wood_gib01d.mdl", "models/gibs/wood_gib01e.mdl", "models/gibs/wood_gib01b.mdl", "models/gibs/wood_gib01c.mdl", "models/gibs/wood_gib01d.mdl", "models/gibs/wood_gib01e.mdl", "models/gibs/wood_gib01b.mdl", "models/gibs/wood_gib01c.mdl", "models/gibs/wood_gib01d.mdl", "models/gibs/wood_gib01e.mdl", "models/gibs/wood_gib01b.mdl", "models/gibs/wood_gib01c.mdl", "models/gibs/wood_gib01d.mdl", "models/gibs/wood_gib01e.mdl", "models/gibs/wood_gib01e.mdl", "models/gibs/wood_gib01b.mdl", "models/gibs/wood_gib01c.mdl", "models/gibs/wood_gib01d.mdl", "models/gibs/wood_gib01e.mdl" }
+	},
+	["Wood"] = {
+		health = 30,
+		sound = "physics/wood/wood_crate_break4.wav",
+		gibs = { "models/gibs/wood_gib01b.mdl", "models/gibs/wood_gib01c.mdl", "models/gibs/wood_gib01d.mdl", "models/gibs/wood_gib01e.mdl", "models/gibs/wood_gib01b.mdl", "models/gibs/wood_gib01c.mdl", "models/gibs/wood_gib01d.mdl", "models/gibs/wood_gib01e.mdl", "models/gibs/wood_gib01b.mdl", "models/gibs/wood_gib01c.mdl", "models/gibs/wood_gib01d.mdl", "models/gibs/wood_gib01e.mdl", "models/gibs/wood_gib01b.mdl", "models/gibs/wood_gib01c.mdl", "models/gibs/wood_gib01d.mdl", "models/gibs/wood_gib01e.mdl", "models/gibs/wood_gib01b.mdl", "models/gibs/wood_gib01c.mdl", "models/gibs/wood_gib01d.mdl", "models/gibs/wood_gib01e.mdl", "models/gibs/wood_gib01e.mdl", "models/gibs/wood_gib01b.mdl", "models/gibs/wood_gib01c.mdl", "models/gibs/wood_gib01d.mdl", "models/gibs/wood_gib01e.mdl" }
+	},
+	["Metal"] = {
+		health = 50,
+		sound = "physics/metal/metal_box_break2.wav",
+		gibs = { "models/gibs/metal_gib1.mdl", "models/gibs/metal_gib2.mdl", "models/gibs/metal_gib3.mdl", "models/gibs/metal_gib4.mdl", "models/gibs/metal_gib1.mdl", "models/gibs/metal_gib2.mdl", "models/gibs/metal_gib3.mdl", "models/gibs/metal_gib4.mdl", "models/gibs/metal_gib1.mdl", "models/gibs/metal_gib2.mdl", "models/gibs/metal_gib3.mdl", "models/gibs/metal_gib4.mdl", "models/gibs/metal_gib1.mdl", "models/gibs/metal_gib2.mdl", "models/gibs/metal_gib3.mdl", "models/gibs/metal_gib4.mdl", "models/gibs/metal_gib1.mdl", "models/gibs/metal_gib2.mdl", "models/gibs/metal_gib3.mdl", "models/gibs/metal_gib4.mdl", "models/gibs/metal_gib1.mdl", "models/gibs/metal_gib2.mdl", "models/gibs/metal_gib3.mdl", "models/gibs/metal_gib4.mdl", "models/gibs/metal_gib4.mdl" }
+	},
+	["Glass"] = {
+		health = 5,
+		sound = "physics/glass/glass_largesheet_break1.wav",
+		gibs = { "models/gibs/glass_shard01.mdl", "models/gibs/glass_shard02.mdl", "models/gibs/glass_shard03.mdl", "models/gibs/glass_shard04.mdl", "models/gibs/glass_shard01.mdl", "models/gibs/glass_shard02.mdl", "models/gibs/glass_shard03.mdl", "models/gibs/glass_shard04.mdl", "models/gibs/glass_shard01.mdl", "models/gibs/glass_shard02.mdl", "models/gibs/glass_shard03.mdl", "models/gibs/glass_shard04.mdl", "models/gibs/glass_shard01.mdl", "models/gibs/glass_shard02.mdl", "models/gibs/glass_shard03.mdl", "models/gibs/glass_shard04.mdl", "models/gibs/glass_shard01.mdl", "models/gibs/glass_shard02.mdl", "models/gibs/glass_shard03.mdl", "models/gibs/glass_shard04.mdl", "models/gibs/glass_shard01.mdl", "models/gibs/glass_shard02.mdl", "models/gibs/glass_shard03.mdl", "models/gibs/glass_shard04.mdl", "models/gibs/glass_shard04.mdl" }
+	},
+	["Human Gibs"] = {
+		health = 50,
+		sound = "physics/body/body_medium_break2.wav",
+		gibs = { "models/Gibs/HGIBS.mdl", "models/Gibs/HGIBS_scapula.mdl", "models/Gibs/HGIBS_scapula.mdl", "models/Gibs/HGIBS_spine.mdl", "models/Gibs/HGIBS_spine.mdl", "models/Gibs/HGIBS_rib.mdl", "models/Gibs/HGIBS_rib.mdl", "models/Gibs/HGIBS_rib.mdl", "models/Gibs/HGIBS_rib.mdl", "models/Gibs/HGIBS_rib.mdl", "models/Gibs/HGIBS_rib.mdl", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "" }
+	},
+	["No Gibs or Sound"] = {
+		health = 100,
+		sound = "",
+		gibs = {}
+	},
+	["Portal Turret Gibs"] = {
+		health = 50,
+		sound = "physics/metal/metal_box_break2.wav",
+		gibs = { "models/npcs/turret/turret_fx_break_gib1.mdl", "models/npcs/turret/turret_fx_break_gib2.mdl", "models/npcs/turret/turret_fx_break_gib3.mdl", "models/npcs/turret/turret_fx_break_gib4.mdl", "models/npcs/turret/turret_fx_break_gib5.mdl", "models/npcs/turret/turret_fx_break_gib6.mdl", "models/npcs/turret/turret_fx_break_gib7.mdl", "models/npcs/turret/turret_fx_break_gib8.mdl", "models/npcs/turret/turret_fx_break_gib9.mdl", "models/npcs/turret/turret_fx_break_gib10.mdl", "models/npcs/turret/turret_fx_break_gib11.mdl", "models/npcs/turret/turret_fx_break_gib12.mdl", "models/npcs/turret/turret_fx_break_gib13.mdl", "models/npcs/turret/turret_fx_break_gib14.mdl", "models/npcs/turret/turret_fx_break_gib15.mdl", "models/npcs/turret/turret_fx_break_gib16.mdl", "models/npcs/turret/turret_fx_break_gib17.mdl", "models/npcs/turret/turret_fx_break_gib18.mdl", "models/npcs/turret/turret_fx_break_gib19.mdl", "models/npcs/turret/turret_fx_break_gib20.mdl", "models/npcs/turret/turret_fx_break_gib21.mdl", "models/npcs/turret/turret_fx_break_gib22.mdl", "models/npcs/turret/turret_fx_break_gib23.mdl", "models/npcs/turret/turret_fx_break_gib24.mdl", "models/npcs/turret/turret_fx_break_gib25.mdl" }
+	}
+}
+
+
+-- Ensure variants that should reuse Default gibs reference them
+if GibPresets and GibPresets["Default"] and GibPresets["Wood"] then
+	GibPresets["Wood"].gibs = GibPresets["Default"].gibs
+end
+
+TOOL.ClientConVar["gibpreset"] = "Default" -- choose a preset gib type
 TOOL.ClientConVar["health"] = ""
 TOOL.ClientConVar["sound"] = ""
 TOOL.ClientConVar["nogibcollision"] = "" -- if set to 0 it's off, but if its set to 1 it's on
+local Tag = "breakabletool"
+
+if SERVER then
+	util.AddNetworkString(Tag)
+end
 
 if CLIENT then
 	language.Add("Tool.breakable.name", "Breakable Tool")
@@ -38,23 +70,37 @@ end
 
 -- Spawn gibs
 local function SpawnGibs(ent, gibs, noCollide)
+	-- Server no longer creates gibs directly; clients handle visual gibs.
+	if SERVER then return end
+
 	for _, mdl in ipairs(gibs) do
 		if mdl == "" then continue end
-		local gib = ents.Create("prop_physics")
+		local gib = ClientsideModel(mdl, RENDERGROUP_OPAQUE)
 		if not IsValid(gib) then continue end
-		gib:SetModel(mdl)
 		gib:SetPos(ent:GetPos() + VectorRand() * 10)
 		gib:SetAngles(AngleRand())
-		gib:Spawn()
 
 		if tonumber(noCollide) == 1 then
 			gib:SetCollisionGroup(COLLISION_GROUP_DEBRIS)
 		end
 
-		local phys = gib:GetPhysicsObject()
+		timer.Simple(20, function()
+			if IsValid(gib) then
+				gib:Remove()
+			end
+		end)
+	end
+end
 
-		if IsValid(phys) then
-			phys:ApplyForceCenter(VectorRand() * 300 + Vector(0, 0, 100))
+local function PrecacheGibModels(ent)
+	if not SERVER or ent.BreakablePrecached then return end
+	ent.BreakablePrecached = true
+
+	local precached = {}
+	for _, mdl in ipairs(ent.BreakableGibs or {}) do
+		if mdl ~= "" and not precached[mdl] then
+			util.PrecacheModel(mdl)
+			precached[mdl] = true
 		end
 	end
 end
@@ -70,23 +116,41 @@ local function BreakEntity(ent)
 		sound.Play(snd, ent:GetPos())
 	end
 
-	SpawnGibs(ent, gibs, noCollide)
-	ent:Remove()
+	if SERVER then
+		PrecacheGibModels(ent)
+
+		net.Start(Tag, true)
+		net.WriteEntity(ent)
+		net.WriteString(ent.BreakableGibPreset or "Default")
+		net.WriteBool(noCollide == 1)
+		net.WriteVector(ent:GetPos())
+
+		net.SendPVS(ent:GetPos())
+		ent:Remove()
+	else
+		SpawnGibs(ent, gibs, noCollide)
+	end
 end
 
 -- Make prop breakable
-local function MakeBreakable(ent, gibs, health, sound, noCollide)
+local function MakeBreakable(ent, gibs, health, sound, noCollide, preset)
 	if not IsValid(ent) then return end
 	ent:SetMaxHealth(health)
 	ent:SetHealth(health)
 	ent.BreakableGibs = gibs
 	ent.BreakableSound = sound
 	ent.NoGibCollision = noCollide -- Store it here
+	ent.BreakableGibPreset = preset or "Default"
+	ent.BreakablePrecached = false
 
 	function ent:PhysicsCollide(data, phys)
 		local speed = data.Speed
 
 		if speed > 150 then
+			if SERVER and not self.BreakablePrecached then
+				PrecacheGibModels(self)
+			end
+
 			local newHealth = self:Health() - speed * 0.05
 			self:SetHealth(newHealth)
 
@@ -102,19 +166,25 @@ function TOOL:LeftClick(trace)
 	if CLIENT then return true end
 	local ent = trace.Entity
 	if not IsValid(ent) or ent:IsPlayer() then return false end
+	local preset = self:GetClientInfo("gibpreset") or "Default"
+	local presetdata = GibPresets[preset]
+	local gibs = {}
 
-	local gibs = { self:GetClientInfo("gib1"), self:GetClientInfo("gib2"), self:GetClientInfo("gib3"), self
-		:GetClientInfo("gib4"), self:GetClientInfo("gib5"), self:GetClientInfo("gib6"), self:GetClientInfo("gib7"), self
-		:GetClientInfo("gib8"), self:GetClientInfo("gib9"), self:GetClientInfo("gib10"), self:GetClientInfo("gib11"),
-		self:GetClientInfo("gib12"), self:GetClientInfo("gib13"), self:GetClientInfo("gib14"), self:GetClientInfo(
-	"gib15"), self:GetClientInfo("gib16"), self:GetClientInfo("gib17"), self:GetClientInfo("gib18"), self:GetClientInfo(
-	"gib19"), self:GetClientInfo("gib20"), self:GetClientInfo("gib21"), self:GetClientInfo("gib22"), self:GetClientInfo(
-	"gib23"), self:GetClientInfo("gib24"), self:GetClientInfo("gib25") }
+	if presetdata and presetdata.gibs then
+		for _, m in ipairs(presetdata.gibs) do
+			table.insert(gibs, m)
+		end
+	end
 
-	local health = tonumber(self:GetClientInfo("health")) or 50
-	local sound = self:GetClientInfo("sound") or ""
+	local health = tonumber(self:GetClientInfo("health")) or (presetdata and presetdata.health) or 50
+	local sound = self:GetClientInfo("sound")
+
+	if (not sound or sound == "") and presetdata then
+		sound = presetdata.sound
+	end
+
 	local noCollide = tonumber(self:GetClientInfo("nogibcollision")) or 0 -- NEW
-	MakeBreakable(ent, gibs, health, sound, noCollide)
+	MakeBreakable(ent, gibs, health, sound, noCollide, preset)
 	local ply = self:GetOwner()
 	undo.Create("Breakable Prop")
 	undo.AddEntity(ent)
@@ -124,6 +194,7 @@ function TOOL:LeftClick(trace)
 	if SERVER then
 		duplicator.StoreEntityModifier(ent, "breakable_tool", {
 			gibs = gibs,
+			orig_gibs = gibs, -- store backwards-compatible list too
 			health = health,
 			sound = sound,
 			noCollide = noCollide -- Add to dupe
@@ -135,8 +206,12 @@ function TOOL:LeftClick(trace)
 end
 
 -- Global damage hook
-hook.Add("EntityTakeDamage", "BreakableToolDamage", function(ent, dmginfo)
-	if not IsValid(ent) or not ent.BreakableGibs then return end
+hook.Add("PostEntityTakeDamage", Tag, function(ent, dmginfo)
+	if not SERVER or not IsValid(ent) or not ent.BreakableGibs then return end
+	if not ent.BreakablePrecached then
+		PrecacheGibModels(ent)
+	end
+
 	local newHealth = ent:Health() - dmginfo:GetDamage()
 	ent:SetHealth(newHealth)
 
@@ -148,250 +223,117 @@ end)
 -- Dupe restore
 if SERVER then
 	duplicator.RegisterEntityModifier("breakable_tool", function(ply, ent, data)
-		MakeBreakable(ent, data.gibs, data.health, data.sound, data.noCollide)
+		-- data may contain: gibs (array), orig_gibs (legacy array), health, sound, noCollide
+		local incoming = data.orig_gibs or data.gibs or {}
+
+		-- Helper: check if a model exists in any preset
+		local function modelInPresets(mdl)
+			if not mdl or mdl == "" then return false end
+
+			for _, p in pairs(GibPresets) do
+				for _, pm in ipairs(p.gibs or {}) do
+					if pm == mdl then return true end
+				end
+			end
+
+			return false
+		end
+
+		-- Try to find the preset with the largest overlap
+		local bestPreset = nil
+		local bestCount = 0
+
+		for name, p in pairs(GibPresets) do
+			local count = 0
+
+			for _, m in ipairs(incoming) do
+				if not m or m == "" then continue end
+
+				for _, pm in ipairs(p.gibs or {}) do
+					if pm == m then
+						count = count + 1
+						break
+					end
+				end
+			end
+
+			if count > bestCount then
+				bestCount = count
+				bestPreset = name
+			end
+		end
+
+		local finalGibs = {}
+
+		if bestCount > 0 and bestPreset and GibPresets[bestPreset] then
+			for _, m in ipairs(GibPresets[bestPreset].gibs) do
+				table.insert(finalGibs, m)
+			end
+		else
+			-- Fall back to filtering incoming list to known preset models
+			for _, m in ipairs(incoming) do
+				if modelInPresets(m) then
+					table.insert(finalGibs, m)
+				end
+			end
+
+			-- If still empty, default to Default preset
+			if #finalGibs == 0 and GibPresets["Default"] then
+				for _, m in ipairs(GibPresets["Default"].gibs) do
+					table.insert(finalGibs, m)
+				end
+			end
+		end
+
+		MakeBreakable(ent, finalGibs, data.health or (GibPresets["Default"] and GibPresets["Default"].health) or 50,
+			data.sound or (GibPresets["Default"] and GibPresets["Default"].sound) or "", data.noCollide,
+			bestPreset or "Default")
 	end)
 end
 
 -- Tool panel with presets
 function TOOL.BuildCPanel(panel)
 	panel:AddControl("Header", {
-		Description = "Make props breakable with 25 gibs, custom health, and sound"
+		Description = "Make props breakable with clientside gibs, custom health, and sound"
 	})
-
-	-- Preset system setup
-	local preset_cvars = { "breakable_health", "breakable_sound", "breakable_nogibcollision" }
-
-	for i = 1, 25 do
-		table.insert(preset_cvars, "breakable_gib" .. i)
-	end
 
 	panel:AddControl("ComboBox", {
-		Label = "Presets",
-		MenuButton = "1",
-		Folder = "breakable_tool",
+		Label = "Gib Preset",
+		MenuButton = "0",
 		Options = {
 			["Default"] = {
-				breakable_health = "50",
-				breakable_sound = "physics/metal/metal_box_break2.wav",
-				breakable_gib1 = "models/gibs/wood_gib01b.mdl",
-				breakable_gib2 = "models/gibs/wood_gib01c.mdl",
-				breakable_gib3 = "models/gibs/wood_gib01d.mdl",
-				breakable_gib4 = "models/gibs/wood_gib01e.mdl",
-				breakable_gib5 = "models/gibs/wood_gib01b.mdl",
-				breakable_gib6 = "models/gibs/wood_gib01c.mdl",
-				breakable_gib7 = "models/gibs/wood_gib01d.mdl",
-				breakable_gib8 = "models/gibs/wood_gib01e.mdl",
-				breakable_gib9 = "models/gibs/wood_gib01b.mdl",
-				breakable_gib10 = "models/gibs/wood_gib01c.mdl",
-				breakable_gib11 = "models/gibs/wood_gib01d.mdl",
-				breakable_gib12 = "models/gibs/wood_gib01e.mdl",
-				breakable_gib13 = "models/gibs/wood_gib01b.mdl",
-				breakable_gib14 = "models/gibs/wood_gib01c.mdl",
-				breakable_gib15 = "models/gibs/wood_gib01d.mdl",
-				breakable_gib16 = "models/gibs/wood_gib01e.mdl",
-				breakable_gib17 = "models/gibs/wood_gib01b.mdl",
-				breakable_gib18 = "models/gibs/wood_gib01c.mdl",
-				breakable_gib19 = "models/gibs/wood_gib01d.mdl",
-				breakable_gib20 = "models/gibs/wood_gib01e.mdl",
-				breakable_gib21 = "models/gibs/wood_gib01e.mdl",
-				breakable_gib22 = "models/gibs/wood_gib01b.mdl",
-				breakable_gib23 = "models/gibs/wood_gib01c.mdl",
-				breakable_gib24 = "models/gibs/wood_gib01d.mdl",
-				breakable_gib25 = "models/gibs/wood_gib01e.mdl"
+				gibpreset = "Default"
 			},
 			["Wood"] = {
-				breakable_health = "30",
-				breakable_sound = "physics/wood/wood_crate_break4.wav",
-				breakable_gib1 = "models/gibs/wood_gib01b.mdl",
-				breakable_gib2 = "models/gibs/wood_gib01c.mdl",
-				breakable_gib3 = "models/gibs/wood_gib01d.mdl",
-				breakable_gib4 = "models/gibs/wood_gib01e.mdl",
-				breakable_gib5 = "models/gibs/wood_gib01b.mdl",
-				breakable_gib6 = "models/gibs/wood_gib01c.mdl",
-				breakable_gib7 = "models/gibs/wood_gib01d.mdl",
-				breakable_gib8 = "models/gibs/wood_gib01e.mdl",
-				breakable_gib9 = "models/gibs/wood_gib01b.mdl",
-				breakable_gib10 = "models/gibs/wood_gib01c.mdl",
-				breakable_gib11 = "models/gibs/wood_gib01d.mdl",
-				breakable_gib12 = "models/gibs/wood_gib01e.mdl",
-				breakable_gib13 = "models/gibs/wood_gib01b.mdl",
-				breakable_gib14 = "models/gibs/wood_gib01c.mdl",
-				breakable_gib15 = "models/gibs/wood_gib01d.mdl",
-				breakable_gib16 = "models/gibs/wood_gib01e.mdl",
-				breakable_gib17 = "models/gibs/wood_gib01b.mdl",
-				breakable_gib18 = "models/gibs/wood_gib01c.mdl",
-				breakable_gib19 = "models/gibs/wood_gib01d.mdl",
-				breakable_gib20 = "models/gibs/wood_gib01e.mdl",
-				breakable_gib21 = "models/gibs/wood_gib01e.mdl",
-				breakable_gib22 = "models/gibs/wood_gib01b.mdl",
-				breakable_gib23 = "models/gibs/wood_gib01c.mdl",
-				breakable_gib24 = "models/gibs/wood_gib01d.mdl",
-				breakable_gib25 = "models/gibs/wood_gib01e.mdl"
+				gibpreset = "Wood"
 			},
 			["Metal"] = {
-				breakable_health = "50",
-				breakable_sound = "physics/metal/metal_box_break2.wav",
-				breakable_gib1 = "models/gibs/metal_gib1.mdl",
-				breakable_gib2 = "models/gibs/metal_gib2.mdl",
-				breakable_gib3 = "models/gibs/metal_gib3.mdl",
-				breakable_gib4 = "models/gibs/metal_gib4.mdl",
-				breakable_gib5 = "models/gibs/metal_gib1.mdl",
-				breakable_gib6 = "models/gibs/metal_gib2.mdl",
-				breakable_gib7 = "models/gibs/metal_gib3.mdl",
-				breakable_gib8 = "models/gibs/metal_gib4.mdl",
-				breakable_gib9 = "models/gibs/metal_gib1.mdl",
-				breakable_gib10 = "models/gibs/metal_gib2.mdl",
-				breakable_gib11 = "models/gibs/metal_gib3.mdl",
-				breakable_gib12 = "models/gibs/metal_gib4.mdl",
-				breakable_gib13 = "models/gibs/metal_gib1.mdl",
-				breakable_gib14 = "models/gibs/metal_gib2.mdl",
-				breakable_gib15 = "models/gibs/metal_gib3.mdl",
-				breakable_gib16 = "models/gibs/metal_gib4.mdl",
-				breakable_gib17 = "models/gibs/metal_gib1.mdl",
-				breakable_gib18 = "models/gibs/metal_gib2.mdl",
-				breakable_gib19 = "models/gibs/metal_gib3.mdl",
-				breakable_gib20 = "models/gibs/metal_gib4.mdl",
-				breakable_gib21 = "models/gibs/metal_gib1.mdl",
-				breakable_gib22 = "models/gibs/metal_gib2.mdl",
-				breakable_gib23 = "models/gibs/metal_gib3.mdl",
-				breakable_gib24 = "models/gibs/metal_gib4.mdl",
-				breakable_gib25 = "models/gibs/metal_gib4.mdl"
+				gibpreset = "Metal"
 			},
 			["Glass"] = {
-				breakable_health = "5",
-				breakable_sound = "physics/glass/glass_largesheet_break1.wav",
-				breakable_gib1 = "models/gibs/glass_shard01.mdl",
-				breakable_gib2 = "models/gibs/glass_shard02.mdl",
-				breakable_gib3 = "models/gibs/glass_shard03.mdl",
-				breakable_gib4 = "models/gibs/glass_shard04.mdl",
-				breakable_gib5 = "models/gibs/glass_shard01.mdl",
-				breakable_gib6 = "models/gibs/glass_shard02.mdl",
-				breakable_gib7 = "models/gibs/glass_shard03.mdl",
-				breakable_gib8 = "models/gibs/glass_shard04.mdl",
-				breakable_gib9 = "models/gibs/glass_shard01.mdl",
-				breakable_gib10 = "models/gibs/glass_shard02.mdl",
-				breakable_gib11 = "models/gibs/glass_shard03.mdl",
-				breakable_gib12 = "models/gibs/glass_shard04.mdl",
-				breakable_gib13 = "models/gibs/glass_shard01.mdl",
-				breakable_gib14 = "models/gibs/glass_shard02.mdl",
-				breakable_gib15 = "models/gibs/glass_shard03.mdl",
-				breakable_gib16 = "models/gibs/glass_shard04.mdl",
-				breakable_gib17 = "models/gibs/glass_shard01.mdl",
-				breakable_gib18 = "models/gibs/glass_shard02.mdl",
-				breakable_gib19 = "models/gibs/glass_shard03.mdl",
-				breakable_gib20 = "models/gibs/glass_shard04.mdl",
-				breakable_gib21 = "models/gibs/glass_shard01.mdl",
-				breakable_gib22 = "models/gibs/glass_shard02.mdl",
-				breakable_gib23 = "models/gibs/glass_shard03.mdl",
-				breakable_gib24 = "models/gibs/glass_shard04.mdl",
-				breakable_gib25 = "models/gibs/glass_shard04.mdl"
+				gibpreset = "Glass"
 			},
 			["Human Gibs"] = {
-				breakable_health = "50",
-				breakable_sound = "physics/body/body_medium_break2.wav",
-				breakable_gib1 = "models/Gibs/HGIBS.mdl",
-				breakable_gib2 = "models/Gibs/HGIBS_scapula.mdl",
-				breakable_gib3 = "models/Gibs/HGIBS_scapula.mdl",
-				breakable_gib4 = "models/Gibs/HGIBS_spine.mdl",
-				breakable_gib5 = "models/Gibs/HGIBS_spine.mdl",
-				breakable_gib6 = "models/Gibs/HGIBS_rib.mdl",
-				breakable_gib7 = "models/Gibs/HGIBS_rib.mdl",
-				breakable_gib8 = "models/Gibs/HGIBS_rib.mdl",
-				breakable_gib9 = "models/Gibs/HGIBS_rib.mdl",
-				breakable_gib10 = "models/Gibs/HGIBS_rib.mdl",
-				breakable_gib11 = "models/Gibs/HGIBS_rib.mdl",
-				breakable_gib12 = "models/Gibs/HGIBS_rib.mdl",
-				breakable_gib13 = "",
-				breakable_gib14 = "",
-				breakable_gib15 = "",
-				breakable_gib16 = "",
-				breakable_gib17 = "",
-				breakable_gib18 = "",
-				breakable_gib19 = "",
-				breakable_gib20 = "",
-				breakable_gib21 = "",
-				breakable_gib22 = "",
-				breakable_gib23 = "",
-				breakable_gib24 = "",
-				breakable_gib25 = ""
+				gibpreset = "Human Gibs"
 			},
 			["No Gibs or Sound"] = {
-				breakable_health = "100",
-				breakable_sound = "",
-				breakable_gib1 = "",
-				breakable_gib2 = "",
-				breakable_gib3 = "",
-				breakable_gib4 = "",
-				breakable_gib5 = "",
-				breakable_gib6 = "",
-				breakable_gib7 = "",
-				breakable_gib8 = "",
-				breakable_gib9 = "",
-				breakable_gib10 = "",
-				breakable_gib11 = "",
-				breakable_gib12 = "",
-				breakable_gib13 = "",
-				breakable_gib14 = "",
-				breakable_gib15 = "",
-				breakable_gib16 = "",
-				breakable_gib17 = "",
-				breakable_gib18 = "",
-				breakable_gib19 = "",
-				breakable_gib20 = "",
-				breakable_gib21 = "",
-				breakable_gib22 = "",
-				breakable_gib23 = "",
-				breakable_gib24 = "",
-				breakable_gib25 = ""
+				gibpreset = "No Gibs or Sound"
 			},
 			["Portal Turret Gibs"] = {
-				breakable_health = "50",
-				breakable_sound = "physics/metal/metal_box_break2.wav",
-				breakable_gib1 = "models/npcs/turret/turret_fx_break_gib1.mdl",
-				breakable_gib2 = "models/npcs/turret/turret_fx_break_gib2.mdl",
-				breakable_gib3 = "models/npcs/turret/turret_fx_break_gib3.mdl",
-				breakable_gib4 = "models/npcs/turret/turret_fx_break_gib4.mdl",
-				breakable_gib5 = "models/npcs/turret/turret_fx_break_gib5.mdl",
-				breakable_gib6 = "models/npcs/turret/turret_fx_break_gib6.mdl",
-				breakable_gib7 = "models/npcs/turret/turret_fx_break_gib7.mdl",
-				breakable_gib8 = "models/npcs/turret/turret_fx_break_gib8.mdl",
-				breakable_gib9 = "models/npcs/turret/turret_fx_break_gib9.mdl",
-				breakable_gib10 = "models/npcs/turret/turret_fx_break_gib10.mdl",
-				breakable_gib11 = "models/npcs/turret/turret_fx_break_gib11.mdl",
-				breakable_gib12 = "models/npcs/turret/turret_fx_break_gib12.mdl",
-				breakable_gib13 = "models/npcs/turret/turret_fx_break_gib13.mdl",
-				breakable_gib14 = "models/npcs/turret/turret_fx_break_gib14.mdl",
-				breakable_gib15 = "models/npcs/turret/turret_fx_break_gib15.mdl",
-				breakable_gib16 = "models/npcs/turret/turret_fx_break_gib16.mdl",
-				breakable_gib17 = "models/npcs/turret/turret_fx_break_gib17.mdl",
-				breakable_gib18 = "models/npcs/turret/turret_fx_break_gib18.mdl",
-				breakable_gib19 = "models/npcs/turret/turret_fx_break_gib19.mdl",
-				breakable_gib20 = "models/npcs/turret/turret_fx_break_gib20.mdl",
-				breakable_gib21 = "models/npcs/turret/turret_fx_break_gib21.mdl",
-				breakable_gib22 = "models/npcs/turret/turret_fx_break_gib22.mdl",
-				breakable_gib23 = "models/npcs/turret/turret_fx_break_gib23.mdl",
-				breakable_gib24 = "models/npcs/turret/turret_fx_break_gib24.mdl",
-				breakable_gib25 = "models/npcs/turret/turret_fx_break_gib25.mdl"
+				gibpreset = "Portal Turret Gibs"
 			}
 		},
-		CVars = preset_cvars
+		CVars = { "gibpreset" }
 	})
-
-	for i = 1, 25 do
-		panel:AddControl("TextBox", {
-			Label = "Gib " .. i,
-			Command = "breakable_gib" .. i
-		})
-	end
 
 	panel:AddControl("TextBox", {
 		Label = "Break Sound Path",
-		Command = "breakable_sound"
+		Command = "sound"
 	})
 
 	panel:AddControl("Slider", {
 		Label = "Health",
-		Command = "breakable_health",
+		Command = "health",
 		Type = "Integer",
 		Min = "1",
 		Max = "500"
@@ -399,6 +341,59 @@ function TOOL.BuildCPanel(panel)
 
 	panel:AddControl("CheckBox", {
 		Label = "Disable gib collision?",
-		Command = "breakable_nogibcollision"
+		Command = "nogibcollision"
 	})
+end
+
+-- Client: receive gib broadcasts and spawn clientside gibs with a global cap
+if CLIENT then
+	local CLIENT_GIBS = {}
+	local MAX_GIBS = 30
+
+	net.Receive(Tag, function()
+		local ent = net.ReadEntity()
+		local preset = net.ReadString()
+		local noCollide = net.ReadBool()
+		local pos = net.ReadVector()
+		local origin = IsValid(ent) and ent:GetPos() or pos
+
+		local gibs = GibPresets[preset] and GibPresets[preset].gibs or GibPresets["Default"].gibs
+		if not gibs then return end
+
+		for _, mdl in ipairs(gibs) do
+			if not mdl or mdl == "" then continue end
+			local gib = ents.CreateClientProp(mdl)
+			if not IsValid(gib) then continue end
+
+			SafeRemoveEntityDelayed(gib, 20)
+			gib:SetPos(origin + VectorRand() * 10)
+			gib:SetAngles(AngleRand())
+			gib:Spawn()
+			gib:PhysicsInit(SOLID_VPHYSICS)
+			gib:SetMoveType(MOVETYPE_VPHYSICS)
+			gib:SetSolid(SOLID_VPHYSICS)
+
+			if noCollide then
+				gib:SetCollisionGroup(COLLISION_GROUP_DEBRIS)
+			end
+
+			-- try to give some movement (may not be available on client for all models)
+			local phys = gib:GetPhysicsObject()
+
+			if IsValid(phys) then
+				phys:ApplyForceCenter(VectorRand() * 300 + Vector(0, 0, 100))
+			end
+
+			table.insert(CLIENT_GIBS, gib)
+
+			-- enforce maximum
+			while #CLIENT_GIBS > MAX_GIBS do
+				local old = table.remove(CLIENT_GIBS, 1)
+
+				if IsValid(old) then
+					SafeRemoveEntity(old)
+				end
+			end
+		end
+	end)
 end
