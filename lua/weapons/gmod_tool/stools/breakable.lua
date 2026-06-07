@@ -5,7 +5,41 @@ local Tag = 'breakabletool'
 
 TOOL.Category = "Destruction"
 TOOL.Name = "Breakable Tool"
+TOOL.Information = {
+	{ name = "left" },
+	{ name = "right" }
+}
 
+local entcbs = _G.BREAKABLE_TOOL_ENTCBS or {}
+_G.BREAKABLE_TOOL_ENTCBS = entcbs
+local function RemoveCB(ent)
+	local id = entcbs[ent]
+	if id then
+		entcbs[ent] = nil
+		ent:RemoveCallback("PhysicsCollide", id)
+		return true
+	end
+end
+
+-- TOOL RightClick: undo breakable on targeted entity
+function TOOL:RightClick(trace)
+	if CLIENT then return true end
+	local ent = trace.Entity
+	if not IsValid(ent) or ent:IsPlayer() then return false end
+
+	-- Only act on entities previously made breakable
+	if not ent.BreakableGibs then return false end
+
+	-- Clear breakable state and restore defaults
+	ent.BreakableGibs = nil
+	ent.BreakableSound = nil
+	ent.NoGibCollision = nil
+	ent.BreakableGibPreset = nil
+	ent.BreakablePrecached = nil
+	RemoveCB(ent)
+
+	return true
+end
 
 -- Shared gib presets (used by server when applying breakable and by client UI)
 local GibPresets = {
@@ -66,6 +100,8 @@ if CLIENT then
 	language.Add("Tool.breakable.name", "Breakable Tool")
 	language.Add("Tool.breakable.desc", "Turn props into breakable objects with gib models and a custom sound")
 	language.Add("Tool.breakable.0", "Left click on a prop to make it breakable")
+	language.Add("Tool.breakable.left", "Left click: Make prop breakable")
+	language.Add("Tool.breakable.right", "Right click: Undo breakable and reload prop")
 end
 
 -- Spawn gibs
@@ -132,6 +168,23 @@ local function BreakEntity(ent)
 	end
 end
 
+local function Entity_CollideCallback(self, data)
+	local speed = data.Speed
+	--TODO: ent flags probably can handle this for us...
+
+	if speed > 150 then
+		if SERVER and not self.BreakablePrecached then
+			PrecacheGibModels(self)
+		end
+
+		local newHealth = self:Health() - speed * 0.05
+		self:SetHealth(newHealth)
+
+		if newHealth <= 0 then
+			BreakEntity(self)
+		end
+	end
+end
 -- Make prop breakable
 local function MakeBreakable(ent, gibs, health, sound, noCollide, preset)
 	if not IsValid(ent) then return end
@@ -142,24 +195,14 @@ local function MakeBreakable(ent, gibs, health, sound, noCollide, preset)
 	ent.NoGibCollision = noCollide -- Store it here
 	ent.BreakableGibPreset = preset or "Default"
 	ent.BreakablePrecached = false
-
-	function ent:PhysicsCollide(data, phys)
-		local speed = data.Speed
-
-		if speed > 150 then
-			if SERVER and not self.BreakablePrecached then
-				PrecacheGibModels(self)
-			end
-
-			local newHealth = self:Health() - speed * 0.05
-			self:SetHealth(newHealth)
-
-			if newHealth <= 0 then
-				BreakEntity(self)
-			end
-		end
-	end
+	RemoveCB(ent)
+	local id = ent:AddCallback("PhysicsCollide", Entity_CollideCallback)
+	entcbs[ent]=id
 end
+
+hook.Add("EntityRemoved",Tag,function(ent)
+	entcbs[ent]=nil
+end)
 
 -- TOOL LeftClick
 function TOOL:LeftClick(trace)
