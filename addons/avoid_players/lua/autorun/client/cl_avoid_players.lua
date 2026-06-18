@@ -46,7 +46,7 @@ hook.Add('CreateMove', Tag, function(cmd)
 	traceData.filter = ply
 	util.TraceHull(traceData)
 	if not tr.Hit or not IsValid(tr.Entity) or not (tr.Entity:IsPlayer() or tr.Entity:IsNPC()) then return end
-
+	if ply:GetMoveType() ~= MOVETYPE_WALK then return end
 	if firstAvoid then
 		firstAvoid = false
 
