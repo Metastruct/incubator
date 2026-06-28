@@ -1,0 +1,11 @@
+{
+	"title" : "Lua weapon switcher remake attempt",
+	"type" : "tool",
+	"tags" : [ "roleplay", "fun" ],
+	"ignore" : [
+		"*.psd",
+		"*.vcproj",
+		"*.git*",
+		"*.bat"
+	]
+}
