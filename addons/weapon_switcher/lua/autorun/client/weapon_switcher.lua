@@ -246,6 +246,7 @@ end
 
 local function SelectSlot(slot)
 	local buckets = GetBuckets(); if not buckets then return end
+	if not buckets[slot] then return end
 	if #buckets[slot] == 0 then
 		PlaySound(SOUND_DENY)
 		return
