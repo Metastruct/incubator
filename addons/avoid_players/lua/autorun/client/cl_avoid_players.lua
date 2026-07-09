@@ -18,16 +18,19 @@ local traceData = {
 	mins = traceMins,
 	maxs = traceMaxs,
 	mask = MASK_PLAYERSOLID,
-	output = tr,
+	output = tr
 }
 
 hook.Add('CreateMove', Tag, function(cmd)
-	if not cl_move_avoid_players_test:GetBool() then return end
-	local ply = LocalPlayer()
-	if not IsValid(ply) or not ply:Alive() then return end
 	local fwd = cmd:GetForwardMove()
 	local sid = cmd:GetSideMove()
 	if fwd == 0 and sid == 0 then return end
+	
+	if not cl_move_avoid_players_test:GetBool() then return end
+	local me = LocalPlayer()
+	if not me:IsValid() or not me:Alive() then return end
+	if me:GetMoveType() ~= MOVETYPE_WALK or me:GetParent():IsValid() then return end
+	
 	-- Reuse pre-allocated angle, just update yaw
 	local viewAng = cmd:GetViewAngles()
 	ang.p = 0
@@ -39,14 +42,18 @@ hook.Add('CreateMove', Tag, function(cmd)
 	local moveLen = moveDir:Length()
 	if moveLen < 1 then return end
 	moveDir:Normalize()
-	local pos = ply:GetPos()
+	local pos = me:GetPos()
 	local startPos = pos + startOffset
 	traceData.start = startPos
 	traceData.endpos = startPos + moveDir * AVOID_DIST
-	traceData.filter = ply
+	traceData.filter = me
 	util.TraceHull(traceData)
-	if not tr.Hit or not IsValid(tr.Entity) or not (tr.Entity:IsPlayer() or tr.Entity:IsNPC()) then return end
-	if ply:GetMoveType() ~= MOVETYPE_WALK then return end
+	local ply = tr.Entity
+	if not tr.Hit then return end
+
+	if not ply:IsValid() or (not ply:IsPlayer() and not ply:IsNPC()) then return end
+	if ply:GetMoveType() ~= MOVETYPE_WALK or ply:GetParent():IsValid() then return end
+
 	if firstAvoid then
 		firstAvoid = false
 
