@@ -73,7 +73,9 @@ local cvScale = CreateClientConVar("weapon_switcher_scale", "1", true, false,
 local scale = 1
 local function S(n) return math.Round(n * scale) end
 
+local fontsCreated = false
 local function ApplyScale()
+	fontsCreated = true
 	scale = math.Clamp(cvScale:GetFloat(), 0.25, 4)
 
 	surface.CreateFont("WeaponSwitcher_Number", {
@@ -108,7 +110,6 @@ local function ApplyScale()
 		blursize = math.max(1, math.Round(6 * scale)),
 	})
 end
-ApplyScale()
 
 cvars.AddChangeCallback("weapon_switcher_scale", function() ApplyScale() end, "WeaponSwitcher_Scale")
 
@@ -300,17 +301,17 @@ end
 
 local function ScrollClaimedByWeapon()
 	local lp = LocalPlayer()
-	if not IsValid(lp) then return false end
+	if not lp:IsValid() then return false end
 
 	local wep = lp:GetActiveWeapon()
-	if not IsValid(wep) then return false end
+	if not wep:IsValid() then return false end
 
 	local cls = wep:GetClass()
 	if cls == "weapon_physgun" or cls == "weapon_physcannon" then
 		return input.IsMouseDown(MOUSE_LEFT)
 	end
 
-	return false
+	return hook.Run("WeaponSwitcher_ScrollClaimed", wep) == true
 end
 
 local iconCache = {}
@@ -443,6 +444,7 @@ end)
 
 hook.Add("HUDPaint", HOOK_PAINT, function()
 	if not cvCustom:GetBool() then return end
+	if not fontsCreated then fontsCreated = true ApplyScale() end
 	if not visible then return end
 	if CurTime() - lastInputTime > SELECTION_TIMEOUT then
 		ResetSelection(true)
