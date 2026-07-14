@@ -62,7 +62,7 @@ local function getStartledBy(target, me)
 		cmd:SetSideMove(sd)
 	end)
 
-	LookAtSmooth(target, 1)
+	LookAtSmooth(target, 0.9,0)
 end
 
 local WHITE = Color(255, 255, 255)
@@ -127,7 +127,7 @@ local function PlayerUsedByPlayer(initator)
 				end
 
 				if rp_react_to_use_do_not_move:GetBool() then
-					LookAtSmooth(initator, 1)
+					LookAtSmooth(initator, 1,0)
 				else
 					getStartledBy(initator)
 				end
