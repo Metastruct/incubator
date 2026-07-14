@@ -536,7 +536,7 @@ fiteme_init = function(pl1, pl2)
 	for pl1, pl2 in players() do
 		pl1:UnStuck()
 		pl1:SetLocalVelocity(Vector(0, 0, 0))
-		pl1:LookAt(pl2)
+		pl1:LookAt(pl2,1,0)
 	end
 
 	return true
