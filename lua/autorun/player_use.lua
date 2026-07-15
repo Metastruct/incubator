@@ -1,7 +1,6 @@
 local Tag = 'playerusehook'
---TODO: 
+--TODO:
 -- - Add easychat integration (show in history only)
--- - highlight who used you for 10 seconds
 
 if SERVER then
 	util.AddNetworkString(Tag)
@@ -88,6 +87,14 @@ local ratelimit_msg = 0
 local msg_next_ok_ply = 0
 local last_user
 local first_msg = true
+local halo_target
+local halo_until = 0
+
+hook.Add("PreDrawHalos", Tag, function()
+	if RealTime() > halo_until then return end
+	if not IsValid(halo_target) then return end
+	halo.Add({ halo_target }, Color(255, 32, 32), 2, 2, 1, true, true)
+end)
 
 local function PlayerUsedByPlayer(initator)
 	local mode = rp_react_to_use_mode:GetInt()
@@ -114,6 +121,9 @@ local function PlayerUsedByPlayer(initator)
 	local now = RealTime()
 	local first = first_msg
 	first_msg = false
+
+	halo_target = initator
+	halo_until = now + 10
 
 	if not rp_react_to_use_mode_friends_only or arefriends then
 		if mode == 1 or mode == 2 then
@@ -153,7 +163,7 @@ local function PlayerUsedByPlayer(initator)
 
 		msg_next_ok_ply = now + math.Clamp(rp_react_to_use_notification_every, 0, 60 * 5)
 
-		if first then
+		if first and mode_msg > 0 then
 			if rp_react_to_use_notification_sound:Trim() ~= "" then
 				surface.PlaySound(rp_react_to_use_notification_sound)
 			end
