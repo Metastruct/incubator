@@ -50,6 +50,25 @@ local mesh_n = 1
 local drawpos_want, drawpos_last
 local mat = Material("editor/wireframe")
 local want_color_index = 1
+local cv_show = CreateClientConVar("ms_drawing_show", "1", true, false, "Show 3D drawings")
+
+function clear_local_meshes()
+	for _, data in pairs(meshes) do
+		if data[1] and data[1]:IsValid() then data[1]:Destroy() end
+	end
+	table.Empty(meshes)
+
+	for aid, t in pairs(pl_meshes) do
+		for k, m in pairs(t) do
+			if m and m:IsValid() then m:Destroy() end
+		end
+		pl_meshes[aid] = nil
+	end
+
+	drawpos_last = nil
+	buff = {}
+	mesh_n = 1
+end
 
 local function increment_color()
 	want_color_index = 1 + (want_color_index) % (#palette)
@@ -250,6 +269,7 @@ function on_chunk_update(aid, chunk_pos, chunk)
 end
 
 hook.Add("PostDrawOpaqueRenderables", Tag, function(a, b)
+	if not cv_show:GetBool() then return end
 	if not drawpos_last or not drawpos_want then return end
 	render.SetMaterial(mat)
 	local last_data

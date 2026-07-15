@@ -701,6 +701,42 @@ end
 kill = panic
 destroy = panic
 
+if SERVER then
+	util.AddNetworkString(Tag .. "_clearall")
+end
+
+function clear_all()
+	dbg_clear()
+
+	if CLIENT then
+		if clear_local_meshes then clear_local_meshes() end
+		msgn_acknowledged = 0
+		table.Empty(ack_dedupe)
+
+		return
+	end
+
+	net.Start(Tag .. "_clearall")
+	net.Broadcast()
+end
+
+if CLIENT then
+	net.Receive(Tag .. "_clearall", function() clear_all() end)
+end
+
+if SERVER then
+	concommand.Add("ms_drawing_clear", function(ply)
+		if IsValid(ply) and not ply:IsAdmin() then
+			ply:ChatPrint("[draw3d] admin only")
+
+			return
+		end
+
+		clear_all()
+		MsgN("[draw3d] cleared by " .. (IsValid(ply) and ply:Nick() or "console"))
+	end)
+end
+
 local _ = CLIENT and false and TEST and timer.Simple(2, function()
 	draw3d.send(1, {33, Vector(11, 22, 33), 44, Vector(44, 55, 66)})
 
