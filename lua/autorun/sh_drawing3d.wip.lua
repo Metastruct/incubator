@@ -457,8 +457,8 @@ function net_proc_chunkmsg(aid, is_chunk_update)
 		end
 	else
 		local chunk = NewChunk()
-		Msg"[draw3d] "
-		print("NewChunk() n=", chunk_pos, want_player(aid))
+		--Msg"[draw3d] "
+		--print("NewChunk() n=", chunk_pos, want_player(aid))
 		local verts = chunk._verts
 
 		for i = 1, MAX_VERTS do
