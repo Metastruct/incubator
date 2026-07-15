@@ -703,6 +703,7 @@ destroy = panic
 
 if SERVER then
 	util.AddNetworkString(Tag .. "_clearall")
+	util.AddNetworkString(Tag .. "_clearreq")
 end
 
 function clear_all()
@@ -722,10 +723,15 @@ end
 
 if CLIENT then
 	net.Receive(Tag .. "_clearall", function() clear_all() end)
+
+	concommand.Add("ms_drawing_clear", function()
+		net.Start(Tag .. "_clearreq")
+		net.SendToServer()
+	end)
 end
 
 if SERVER then
-	concommand.Add("ms_drawing_clear", function(ply)
+	local function do_clear(ply)
 		if IsValid(ply) and not ply:IsAdmin() then
 			ply:ChatPrint("[draw3d] admin only")
 
@@ -734,7 +740,10 @@ if SERVER then
 
 		clear_all()
 		MsgN("[draw3d] cleared by " .. (IsValid(ply) and ply:Nick() or "console"))
-	end)
+	end
+
+	concommand.Add("ms_drawing_clear", do_clear)
+	net.Receive(Tag .. "_clearreq", function(_, pl) do_clear(pl) end)
 end
 
 local _ = CLIENT and false and TEST and timer.Simple(2, function()
