@@ -38,7 +38,16 @@ local MODELS       = {
 	}, -- verify nose direction visually
 	{
 		mdl = "models/props/cs_militia/fishriver01.mdl",
-		yaw_offset = 0
+		yaw_offset = 0,
+		-- color variants sampled from the reference fish the user built near the
+		-- arcade; one is picked per fish at spawn. goldfish stays uncolored
+		-- (its material doesn't tint via SetColor), so it has no colors table.
+		colors = {
+			Color(255, 159, 159),
+			Color(159, 174, 255),
+			Color(159, 255, 166),
+			Color(253, 255, 154)
+		}
 	}
 }
 
@@ -870,9 +879,11 @@ local TANKS = {
 		mins = LMVector { -56, -592, 32, "arcade" },
 		maxs = LMVector { -175, 385, 109, "arcade" },
 		nesting = {
-			{ range = 32, pos = LMVector { -133, -2, 30, "arcade" } },
-			{ range = 32, pos = LMVector { -145, -224, 25, "arcade" } },
-			{ range = 32, pos = LMVector { -67, -473, 31, "arcade" } }
+			{ range = 32, pos = LMVector { -131, 57, 52, "arcade" } },
+			{ range = 32, pos = LMVector { -131, -229, 50, "arcade" } },
+			{ range = 32, pos = LMVector { -110, -469, 53, "arcade" } },
+			{ range = 32, pos = LMVector { -136, -562, 56, "arcade" } },
+			{ range = 32, pos = LMVector { -139, 325, 50, "arcade" } }
 		}
 	},
 	{
@@ -946,6 +957,13 @@ SpawnBoids = function(aq, n)
 			local mat = Matrix()
 			mat:Scale(Vector(s, sy, s))
 			ent:EnableMatrix("RenderMultiply", mat)
+
+			local colors = MODELS[modelIdx].colors
+
+			if colors then
+				ent:SetColor(colors[math.random(#colors)])
+			end
+
 			setpos.x, setpos.y, setpos.z = px, py, pz
 			ent:SetPos(setpos)
 			setang.p, setang.y, setang.r = 0, yaw + MODELS[modelIdx].yaw_offset, 0
