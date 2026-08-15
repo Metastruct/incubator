@@ -11,16 +11,24 @@
 --   aquarium_reload      re-compile this file from disk (hot reload)
 --   aquarium_info        print config + state
 -- Auto: fish are removed after 10s of no simulation (player far from the tank)
--- and respawn when the "lua_trigger" hook reports the player inside the lobby.
+-- and respawn when the player is back near the tank (checked every 0.2s while
+-- the "lua_trigger" hook reports the player inside the lobby).
 local Tag = 'aquarium' -- use for all hooks
 
--- Gate the module on the landmark system: the tank coordinates are LMVectors
--- relative to the "arcade" landmark, so without it the config cannot resolve.
--- Without the landmark module or the "arcade" landmark, do not load fully.
+-- Gate on the landmark system: the tank coordinates are LMVectors relative to
+-- the "arcade" landmark, so without it the config cannot resolve.
 pcall(require, "landmark")
 
 if not LMVector or not landmark.get("arcade") then
 	return
+end
+
+-- Master switch: 0 prevents fish from spawning (and drops any alive).
+local aquarium_enabled = CreateConVar("aquarium_enabled", "1", FCVAR_ARCHIVE, "Master switch for the aquarium fish")
+
+local function FishEnabled()
+	local cv = GetConVar("aquarium_enabled")
+	return not cv or cv:GetBool()
 end
 
 local MODELS       = {
@@ -74,6 +82,7 @@ local CFG          = {
 	-- crowbar-hit sound trigger for the alert
 	sound_alert_dur = 3, -- seconds the sound-triggered alert stays on (resets per hit)
 	idle_remove = 10, -- seconds without simulation before ClientsideModels are removed
+	presence_range = 1500, -- how close the player must be to a tank to respawn/simulate it
 	-- player-eye attraction (curiosity)
 	attr_range = 320, -- attraction range from the local player's eye
 	attr_min = 60,    -- keep-out radius: never get closer than this
@@ -87,6 +96,8 @@ local CFG          = {
 local aquariums    = {} -- one boid-swarm per tank (multi-aquarium)
 local think_hooked = false
 local sound_hooked = false
+local in_lobby     = false -- last known "lobby" trigger state (from lua_trigger)
+local presence_t   = 0 -- 0.2s accumulator for the proximity respawn poll (see Think)
 -- Reused trace buffers (zero-alloc pattern)
 local trace_res    = {}
 local tmppos       = Vector()
@@ -663,6 +674,11 @@ local function RemoveAquariumBoids(aq)
 	aq.live = false
 end
 
+-- forward decls: SpawnBoids/SpawnAquarium are defined further down, but the
+-- Think closure above them must reference them as upvalues, not globals
+local SpawnBoids
+local SpawnAquarium
+
 local function RegisterThink()
 	if think_hooked then return end
 	think_hooked = true
@@ -670,6 +686,47 @@ local function RegisterThink()
 	hook.Add("Think", Tag, function()
 		local lp = LocalPlayer()
 		local now = CurTime()
+		local enabled = FishEnabled()
+
+		-- master switch: while off, no fish are allowed to stay alive
+		if not enabled and #aquariums > 0 then
+			local removed = false
+
+			for _, aq in ipairs(aquariums) do
+				if aq.live and #aq.boids > 0 then
+					RemoveAquariumBoids(aq)
+					removed = true
+				end
+			end
+
+			if removed then
+				print("aquarium: disabled (aquarium_enabled 0)")
+			end
+		end
+
+		-- every 0.2s: while enabled, in the lobby and near a tank, respawn
+		-- anything the idle remover dropped (lua_trigger only fires on state
+		-- change, so the trigger handler alone never brings them back)
+		presence_t = presence_t + FrameTime()
+
+		if presence_t >= 0.2 then
+			presence_t = 0
+
+			if enabled and in_lobby and IsValid(lp) then
+				local pr2 = CFG.presence_range * CFG.presence_range
+
+				if #aquariums == 0 then
+					SpawnAquarium(CFG.n_boids)
+				else
+					for _, aq in ipairs(aquariums) do
+						if not aq.live and lp:GetPos():DistToSqr(aq.center) <= pr2 then
+							SpawnBoids(aq, CFG.n_boids)
+							print("aquarium: respawned on proximity")
+						end
+					end
+				end
+			end
+		end
 
 		for _, aq in ipairs(aquariums) do
 			if aq.alert_from_sound and now - aq.alert_sound_t > CFG.sound_alert_dur then
@@ -683,7 +740,7 @@ local function RegisterThink()
 				print("aquarium: removed fish (idle " .. CFG.idle_remove .. "s)")
 			end
 
-			if #aq.boids > 0 and IsValid(lp) and lp:GetPos():DistToSqr(aq.center) <= 1500 * 1500 then
+			if #aq.boids > 0 and IsValid(lp) and lp:GetPos():DistToSqr(aq.center) <= CFG.presence_range * CFG.presence_range then
 				aq.acc = aq.acc + FrameTime()
 				local step = CFG.step
 				local steps = 0
@@ -776,52 +833,58 @@ local function KillAquarium()
 		think_hooked = false
 	end
 
+
 	if sound_hooked then
 		hook.Remove("EntityEmitSound", Tag)
 		sound_hooked = false
 	end
 end
 
+-- Tank coordinates are LMVectors relative to the "arcade" landmark. LMVector
+-- can return nil for an offset that doesn't resolve, so a pass below drops any
+-- tank (or nesting spot) whose offsets came back nil, then turns the survivors
+-- into plain world Vectors. The gameplay code never calls :ToWorld() itself.
 local TANKS = {
 	{
 		mins = LMVector { -56, -592, 32, "arcade" },
 		maxs = LMVector { -175, 385, 109, "arcade" },
 		nesting = {
-			{
-				range = 32,
-				pos = { -133, -2, 30, "arcade" }
-			},
-			{
-				range = 32,
-				pos = LMVector { -145, -224, 25, "arcade" }
-			},
-			{
-				range = 32,
-				pos = { -67, -473, 31, "arcade" }
-			}
+			{ range = 32, pos = LMVector { -133, -2, 30, "arcade" } },
+			{ range = 32, pos = LMVector { -145, -224, 25, "arcade" } },
+			{ range = 32, pos = LMVector { -67, -473, 31, "arcade" } }
 		}
 	},
 	{
 		mins = LMVector { -598, -63, -263, "arcade" },
 		maxs = LMVector { -494, 329, -168, "arcade" },
 		nesting = {
-			{
-				range = 32,
-				pos = { -530, 167, -240, "arcade" }
-			},
-			{
-				range = 32,
-				pos = { -517, 59, -241, "arcade" }
-			},
-			{
-				range = 32,
-				pos = { -541, 302, -242, "arcade" }
-			}
+			{ range = 32, pos = LMVector { -530, 167, -240, "arcade" } },
+			{ range = 32, pos = LMVector { -517, 59, -241, "arcade" } },
+			{ range = 32, pos = LMVector { -541, 302, -242, "arcade" } }
 		}
 	}
 }
 
-local function SpawnBoids(aq, n)
+for i = #TANKS, 1, -1 do
+	local tank = TANKS[i]
+
+	if tank.mins and tank.maxs then
+		tank.mins = tank.mins:ToWorld()
+		tank.maxs = tank.maxs:ToWorld()
+
+		for j = #tank.nesting, 1, -1 do
+			if tank.nesting[j].pos then
+				tank.nesting[j].pos = tank.nesting[j].pos:ToWorld()
+			else
+				table.remove(tank.nesting, j)
+			end
+		end
+	else
+		table.remove(TANKS, i)
+	end
+end
+
+SpawnBoids = function(aq, n)
 	local lo, hi = aq.mins, aq.maxs
 	local margin = CFG.wall_margin
 
@@ -855,9 +918,11 @@ local function SpawnBoids(aq, n)
 			print("aquarium: failed to create ClientsideModel for " .. MODELS[modelIdx].mdl)
 		else
 			local s = math.Rand(0.5, 1.4)
+			local sy = math.Rand(0.5, 1.4) * 1.5 -- y (width) varies independently, 1.5x wider
 			b.scale = s
+			b.scale_y = sy
 			local mat = Matrix()
-			mat:Scale(Vector(s, s, s))
+			mat:Scale(Vector(s, sy, s))
 			ent:EnableMatrix("RenderMultiply", mat)
 			setpos.x, setpos.y, setpos.z = px, py, pz
 			ent:SetPos(setpos)
@@ -872,37 +937,19 @@ local function SpawnBoids(aq, n)
 	aq.lastSim = CurTime()
 end
 
-local function SpawnAquarium(n)
+SpawnAquarium = function(n)
+	if not FishEnabled() then return end
 	KillAquarium()
 
-	if not LMVector or not landmark then
-		print("aquarium: LMVector/landmark module not available")
-
-		return
-	end
-
 	for _, tank in ipairs(TANKS) do
-		local mins = tank.mins:ToWorld()
-		local maxs = tank.maxs:ToWorld()
+		local mins, maxs = tank.mins, tank.maxs
 		local lo = Vector(math.min(mins.x, maxs.x), math.min(mins.y, maxs.y), math.min(mins.z, maxs.z))
 		local hi = Vector(math.max(mins.x, maxs.x), math.max(mins.y, maxs.y), math.max(mins.z, maxs.z))
 		local nesting = {}
 
 		for j, spot in ipairs(tank.nesting) do
-			local p = spot.pos
-
-			if type(p.x) == "number" and type(p.z) == "number" and not p.vec then
-				-- already a world Vector
-			elseif p.ToWorld then
-				-- LMVector (or the LMVector{...} call result)
-				p = p:ToWorld()
-			else
-				-- plain { x, y, z, "landmark" } array
-				p = LMVector(p):ToWorld()
-			end
-
 			nesting[j] = {
-				pos = p,
+				pos = spot.pos,
 				range = spot.range or 32
 			}
 		end
@@ -940,6 +987,7 @@ end
 -- live only while the player is inside the lobby trigger
 hook.Add("lua_trigger", Tag, function(trigger, insideit)
 	if trigger ~= "lobby" then return end
+	in_lobby = insideit
 
 	if insideit then
 		if #aquariums == 0 then
