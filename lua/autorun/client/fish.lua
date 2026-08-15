@@ -81,6 +81,7 @@ local CFG          = {
 	home_visit_max = 3,
 	-- crowbar-hit sound trigger for the alert
 	sound_alert_dur = 3, -- seconds the sound-triggered alert stays on (resets per hit)
+	alert_exit_max = 4, -- when the alert clears, each fish lingers 0..this many s
 	idle_remove = 10, -- seconds without simulation before ClientsideModels are removed
 	presence_range = 1500, -- how close the player must be to a tank to respawn/simulate it
 	-- player-eye attraction (curiosity)
@@ -175,8 +176,6 @@ local function SimulateTick(aq, dt)
 	local n = #boids
 	local cfg = CFG
 	local mins, maxs = aq.mins, aq.maxs
-	local maxForce = cfg.max_force * (aq.alert and 3 or 1)
-	local steerMul = aq.alert and 2 or 1
 	local time = CurTime()
 	local sep_r = cfg.sep_r
 	local sep_r2 = sep_r * sep_r
@@ -197,9 +196,25 @@ local function SimulateTick(aq, dt)
 		local px, py, pz = b[1], b[2], b[3]
 		local vx, vy, vz = b[7], b[8], b[9]
 
+		-- per-fish alert state: after the aquarium alert clears, each fish
+		-- lingers at its nesting spot 0..alert_exit_max seconds (staggered)
+		-- before returning to normal, so they never all leave at once
+		local alerting = aq.alert
+
+		if not aq.alert and (b.alert_exit or 0) > 0 then
+			b.alert_exit = b.alert_exit - dt
+
+			if b.alert_exit > 0 then
+				alerting = true
+			end
+		end
+
+		local maxForce = cfg.max_force * (alerting and 3 or 1)
+		local steerMul = alerting and 2 or 1
+
 		-- --- behavior state machine: cruise / rest / dart / home -------------
 		-- (frozen while alert: fish seek their nesting spots instead)
-		if not aq.alert then
+		if not alerting then
 			if b.mode == "home" then
 				-- visiting the safe spot; leave when the visit ends
 				b.mode_t = b.mode_t - dt
@@ -371,7 +386,7 @@ local function SimulateTick(aq, dt)
 		-- --- attraction to the local player's eye --------------------------
 		local attrX, attrY, attrZ = 0, 0, 0
 
-		if not aq.alert and b.mode ~= "dart" and b.mode ~= "home" and eye and b.bored_t <= 0 then
+		if not alerting and b.mode ~= "dart" and b.mode ~= "home" and eye and b.bored_t <= 0 then
 			local dx, dy, dz = eye.x - px, eye.y - py, eye.z - pz
 			local d = math.sqrt(dx * dx + dy * dy + dz * dz)
 
@@ -402,7 +417,7 @@ local function SimulateTick(aq, dt)
 		local desX, desY, desZ
 		local target_speed
 
-		if aq.alert then
+		if alerting then
 			-- seek the nearest nesting spot; hover around it once there
 			local bd, spx, spy, spz = 1e30, 0, 0, 0
 
@@ -535,7 +550,7 @@ local function SimulateTick(aq, dt)
 
 		local lim_min, lim_max
 
-		if aq.alert then
+		if alerting then
 			lim_min, lim_max = 4, cfg.max_speed * 1.6 -- allow both the dash and the calm mill
 		elseif b.mode == "home" then
 			lim_min, lim_max = 4, cfg.max_speed -- calm seek + slow orbit at the safe spot
@@ -613,7 +628,7 @@ local function SimulateTick(aq, dt)
 		local yawT = math.deg(math.atan2(vy, vx)) + model.yaw_offset
 		b.pf = b.pf + (math.Clamp(vz / nspd, -1, 1) - b.pf) * (1 - math.exp(-dt * 3))
 		local pitchT = -math.deg(math.asin(b.pf))
-		local turnMul = aq.alert and (b.mill and 0.4 or 1.4) or
+		local turnMul = alerting and (b.mill and 0.4 or 1.4) or
 		(b.mode == "dart" and 1.6 or (b.mode == "rest" and 0.5 or 1))
 		local maxTurn = cfg.turn_rate * dt * turnMul
 		local ny = b[5] + math.Clamp(math.AngleDifference(yawT, b[5]), -maxTurn, maxTurn)
@@ -625,7 +640,7 @@ local function SimulateTick(aq, dt)
 		local ent = b[11]
 
 		if IsValid(ent) then
-			local bobMult = aq.alert and 0 or (b.mode == "rest" and 2.2 or 1)
+			local bobMult = alerting and 0 or (b.mode == "rest" and 2.2 or 1)
 			local bobFreq = cfg.bob_freq * (b.mode == "rest" and 0.6 or 1)
 			local bob = math.sin(time * bobFreq + b.phase) * cfg.bob_amp * bobMult * math.min(1, nspd / 35)
 			setpos.x, setpos.y, setpos.z = px, py, pz + bob
@@ -732,6 +747,12 @@ local function RegisterThink()
 			if aq.alert_from_sound and now - aq.alert_sound_t > CFG.sound_alert_dur then
 				aq.alert = false
 				aq.alert_from_sound = false
+
+				-- stagger the return: each fish lingers 0..alert_exit_max
+				-- seconds at its nesting spot before leaving
+				for _, b in ipairs(aq.boids) do
+					b.alert_exit = math.Rand(0, CFG.alert_exit_max)
+				end
 			end
 
 			-- idle cleanup: not simulated for a while -> drop the ClientsideModels
@@ -792,6 +813,7 @@ local function RegisterSound()
 			for _, b in ipairs(aq.boids) do
 				b.curious_t = 0
 				b.bored_t = 0
+				b.alert_exit = 0 -- cancel any pending staggered exit
 			end
 
 			::next_aq::
@@ -832,7 +854,6 @@ local function KillAquarium()
 		hook.Remove("Think", Tag)
 		think_hooked = false
 	end
-
 
 	if sound_hooked then
 		hook.Remove("EntityEmitSound", Tag)
@@ -902,6 +923,7 @@ SpawnBoids = function(aq, n)
 		b.tx, b.ty, b.tz = px, py, pz
 		b.curious_t = 0
 		b.bored_t = 0
+		b.alert_exit = 0
 		b.speed = math.Rand(CFG.min_speed, CFG.max_speed)
 		b.home_t = math.Rand(CFG.home_min, CFG.home_max)
 		b.pf = 0 -- low-passed vertical velocity ratio for pitch
@@ -918,7 +940,7 @@ SpawnBoids = function(aq, n)
 			print("aquarium: failed to create ClientsideModel for " .. MODELS[modelIdx].mdl)
 		else
 			local s = math.Rand(0.5, 1.4)
-			local sy = math.Rand(0.5, 1.4) * 1.5 -- y (width) varies independently, 1.5x wider
+			local sy = math.Rand(0.5, 1.4) * 2 -- y (width) varies independently, up to 2x wider
 			b.scale = s
 			b.scale_y = sy
 			local mat = Matrix()
@@ -1057,6 +1079,12 @@ concommand.Add("aquarium_alert", function(_, _, args)
 			for _, b in ipairs(aq.boids) do
 				b.curious_t = 0
 				b.bored_t = 0
+				b.alert_exit = 0
+			end
+		else
+			-- same stagger as the sound alert clearing
+			for _, b in ipairs(aq.boids) do
+				b.alert_exit = math.Rand(0, CFG.alert_exit_max)
 			end
 		end
 	end
