@@ -54,13 +54,35 @@ local SLOT_OVERRIDE     = {
 	weapon_physgun    = { slot = 0, pos = 50 },
 }
 
+local ORDER_FILE        = "weapon_switcher_order.json"
+local userOrder         = {}
+
+local function LoadUserOrder()
+	local raw = file.Read(ORDER_FILE, "DATA")
+	if not raw then return end
+	local ok, tbl = pcall(util.JSONToTable, raw)
+	if ok and type(tbl) == "table" then userOrder = tbl end
+end
+
+local function SaveUserOrder()
+	file.Write(ORDER_FILE, util.TableToJSON(userOrder, true))
+end
+
+LoadUserOrder()
+
 local function GetSlotOf(w)
-	local o = SLOT_OVERRIDE[w:GetClass()]
+	local cls = w:GetClass()
+	local u = userOrder[cls]
+	if u then return u.slot end
+	local o = SLOT_OVERRIDE[cls]
 	return o and o.slot or w:GetSlot()
 end
 
 local function GetSlotPosOf(w)
-	local o = SLOT_OVERRIDE[w:GetClass()]
+	local cls = w:GetClass()
+	local u = userOrder[cls]
+	if u then return u.pos end
+	local o = SLOT_OVERRIDE[cls]
 	return o and o.pos or w:GetSlotPos()
 end
 
@@ -93,9 +115,11 @@ local function ApplyScale()
 		antialias = true,
 	})
 
+	-- icon fonts stay at a fixed base size; the HL2 font stops rendering
+	-- reliably past ~140, so we scale the draw via cam.PushModelMatrix instead.
 	surface.CreateFont("WeaponSwitcher_Icon", {
 		font = "HalfLife2",
-		size = math.Round(140 * scale),
+		size = 140,
 		weight = 0,
 		antialias = true,
 		additive = true,
@@ -103,11 +127,11 @@ local function ApplyScale()
 
 	surface.CreateFont("WeaponSwitcher_IconGlow", {
 		font = "HalfLife2",
-		size = math.Round(140 * scale),
+		size = 140,
 		weight = 0,
 		antialias = true,
 		additive = true,
-		blursize = math.max(1, math.Round(6 * scale)),
+		blursize = 6,
 	})
 end
 
@@ -349,37 +373,31 @@ local function DrawWeaponIcon(w, x, y, boxW, boxH, alpha)
 	if info then
 		local char = ICON_CHAR[cls] or info.char
 		local tint = ICON_COLOR[cls] or COL_NUMBER
-		local scale = ICON_SCALE[cls] or 1
+		local iconScale = (ICON_SCALE[cls] or 1) * scale
 		surface.SetFont("WeaponSwitcher_Icon")
-		surface.SetTextColor(tint.r, tint.g, tint.b, alpha)
 		local tw, th = surface.GetTextSize(char)
-		local px = x + math.floor((boxW - tw) * 0.5)
-		local py = y + math.floor((boxH - S(28) - th) * 0.5)
+		local ew, eh = tw * iconScale, th * iconScale
+		local px = x + math.floor((boxW - ew) * 0.5)
+		local py = y + math.floor((boxH - S(28) - eh) * 0.5)
 
-		local pushed = false
-		if scale ~= 1 then
-			local cx, cy = px + tw * 0.5, py + th * 0.5
-			local m = Matrix()
-			m:Translate(Vector(cx, cy, 0))
-			m:Scale(Vector(scale, scale, 1))
-			m:Translate(Vector(-cx, -cy, 0))
-			cam.PushModelMatrix(m)
-			pushed = true
-		end
+		local m = Matrix()
+		m:Translate(Vector(px, py, 0))
+		m:Scale(Vector(iconScale, iconScale, 1))
+		cam.PushModelMatrix(m)
 
 		surface.SetFont("WeaponSwitcher_IconGlow")
 		surface.SetTextColor(tint.r, tint.g, tint.b, math.floor(alpha * 0.6))
 		for _ = 1, 3 do
-			surface.SetTextPos(px, py)
+			surface.SetTextPos(0, 0)
 			surface.DrawText(char)
 		end
 
 		surface.SetFont("WeaponSwitcher_Icon")
 		surface.SetTextColor(tint.r, tint.g, tint.b, alpha)
-		surface.SetTextPos(px, py)
+		surface.SetTextPos(0, 0)
 		surface.DrawText(char)
 
-		if pushed then cam.PopModelMatrix() end
+		cam.PopModelMatrix()
 		return
 	end
 
@@ -415,6 +433,7 @@ end)
 hook.Add("PlayerBindPress", HOOK_INPUT, function(ply, bind, pressed)
 	if not pressed then return end
 	if not cvCustom:GetBool() then return end
+	if ply:InVehicle() then return end
 
 	if bind == "invnext" or bind == "invprev" then
 		if ScrollClaimedByWeapon() then return end
@@ -445,6 +464,11 @@ end)
 hook.Add("HUDPaint", HOOK_PAINT, function()
 	if not cvCustom:GetBool() then return end
 	if not fontsCreated then fontsCreated = true ApplyScale() end
+	local lp = LocalPlayer()
+	if IsValid(lp) and lp:InVehicle() then
+		if visible then ResetSelection(false) end
+		return
+	end
 	if not visible then return end
 	if CurTime() - lastInputTime > SELECTION_TIMEOUT then
 		ResetSelection(true)
@@ -531,3 +555,208 @@ hook.Add("HUDPaint", HOOK_PAINT, function()
 		end
 	end
 end)
+
+local function OpenReorderMenu()
+	local lp = LocalPlayer()
+	if not IsValid(lp) then return end
+
+	local frame = vgui.Create("DFrame")
+	frame:SetTitle("Weapon Switcher - Reorder")
+	frame:SetSize(920, 540)
+	frame:Center()
+	frame:MakePopup()
+
+	local hint = vgui.Create("DLabel", frame)
+	hint:Dock(TOP)
+	hint:SetTall(20)
+	hint:SetContentAlignment(5)
+	hint:SetText("select a row, then Up/Down to reorder or right-click to move columns. changes save automatically.")
+
+	local body = vgui.Create("DPanel", frame)
+	body:Dock(FILL)
+	body:DockPadding(4, 4, 4, 4)
+	body.Paint = function() end
+
+	local lists = {}
+	local slotArrays = {}
+	local classes = {}
+
+	local function GatherClasses()
+		local out = {}
+		for _, w in ipairs(lp:GetWeapons()) do
+			if IsValid(w) then out[w:GetClass()] = { name = PrettyName(w) } end
+		end
+		for c in pairs(userOrder) do
+			if not out[c] then out[c] = { name = c } end
+		end
+		return out
+	end
+
+	local function ResolveOrder(cls)
+		local u = userOrder[cls]
+		if u then return u.slot, u.pos end
+		local o = SLOT_OVERRIDE[cls]
+		if o then return o.slot, o.pos end
+		for _, w in ipairs(lp:GetWeapons()) do
+			if IsValid(w) and w:GetClass() == cls then
+				return w:GetSlot(), w:GetSlotPos()
+			end
+		end
+		return 0, 0
+	end
+
+	local function BuildArrays()
+		for s = 0, NUM_SLOTS - 1 do slotArrays[s] = {} end
+		for cls, info in pairs(classes) do
+			local slot, pos = ResolveOrder(cls)
+			if slot < 0 or slot >= NUM_SLOTS then slot = 0 end
+			table.insert(slotArrays[slot], { class = cls, name = info.name, sortPos = pos })
+		end
+		for s = 0, NUM_SLOTS - 1 do
+			table.sort(slotArrays[s], function(a, b) return a.sortPos < b.sortPos end)
+		end
+	end
+
+	local function Commit()
+		userOrder = {}
+		for s = 0, NUM_SLOTS - 1 do
+			for i, item in ipairs(slotArrays[s]) do
+				userOrder[item.class] = { slot = s, pos = i }
+			end
+		end
+		SaveUserOrder()
+	end
+
+	local function RefreshList(slot, selectClass)
+		lists[slot]:Clear()
+		for _, item in ipairs(slotArrays[slot]) do
+			local line = lists[slot]:AddLine(item.name)
+			line.wsClass = item.class
+			if selectClass and item.class == selectClass then
+				lists[slot]:SelectItem(line)
+			end
+		end
+	end
+
+	local function RefreshAll()
+		for s = 0, NUM_SLOTS - 1 do RefreshList(s) end
+	end
+
+	local function GetSelectedIndex(slot)
+		local _, line = lists[slot]:GetSelectedLine()
+		if not line then return nil end
+		for i, item in ipairs(slotArrays[slot]) do
+			if item.class == line.wsClass then return i end
+		end
+	end
+
+	local function Move(slot, delta)
+		local i = GetSelectedIndex(slot); if not i then return end
+		local j = i + delta
+		local arr = slotArrays[slot]
+		if j < 1 or j > #arr then return end
+		arr[i], arr[j] = arr[j], arr[i]
+		RefreshList(slot, arr[j].class)
+		Commit()
+	end
+
+	local function MoveToSlot(fromSlot, toSlot)
+		if fromSlot == toSlot then return end
+		local i = GetSelectedIndex(fromSlot); if not i then return end
+		local item = table.remove(slotArrays[fromSlot], i)
+		table.insert(slotArrays[toSlot], item)
+		RefreshList(fromSlot)
+		RefreshList(toSlot, item.class)
+		Commit()
+	end
+
+	local function ResetSelectedRow(slot)
+		local i = GetSelectedIndex(slot); if not i then return end
+		local cls = slotArrays[slot][i].class
+		userOrder[cls] = nil
+		SaveUserOrder()
+		classes = GatherClasses()
+		BuildArrays()
+		RefreshAll()
+	end
+
+	for slot = 0, NUM_SLOTS - 1 do
+		local col = vgui.Create("DPanel", body)
+		col:Dock(LEFT)
+		col:SetWide(145)
+		col:DockMargin(2, 0, 2, 0)
+		col.Paint = function(_, w, h)
+			surface.SetDrawColor(30, 30, 30, 220)
+			surface.DrawRect(0, 0, w, h)
+		end
+
+		local hdr = vgui.Create("DLabel", col)
+		hdr:Dock(TOP)
+		hdr:SetTall(20)
+		hdr:SetContentAlignment(5)
+		hdr:SetText("Slot " .. (slot + 1))
+
+		local btns = vgui.Create("DPanel", col)
+		btns:Dock(BOTTOM)
+		btns:SetTall(52)
+		btns.Paint = function() end
+		btns:DockPadding(2, 2, 2, 2)
+
+		local up = vgui.Create("DButton", btns)
+		up:Dock(TOP)
+		up:SetText("Up")
+		up.DoClick = function() Move(slot, -1) end
+
+		local down = vgui.Create("DButton", btns)
+		down:Dock(TOP)
+		down:DockMargin(0, 2, 0, 0)
+		down:SetText("Down")
+		down.DoClick = function() Move(slot, 1) end
+
+		local list = vgui.Create("DListView", col)
+		list:Dock(FILL)
+		list:SetMultiSelect(false)
+		list:SetHeaderHeight(0)
+		list:AddColumn("Weapon")
+		lists[slot] = list
+
+		list.OnRowRightClick = function(_, lineID)
+			list:SelectItem(list:GetLine(lineID))
+			local m = DermaMenu()
+			for s = 0, NUM_SLOTS - 1 do
+				if s ~= slot then
+					m:AddOption("Move to slot " .. (s + 1), function() MoveToSlot(slot, s) end)
+				end
+			end
+			m:AddSpacer()
+			m:AddOption("Reset to default", function() ResetSelectedRow(slot) end)
+			m:Open()
+		end
+	end
+
+	local footer = vgui.Create("DPanel", frame)
+	footer:Dock(BOTTOM)
+	footer:SetTall(30)
+	footer.Paint = function() end
+	footer:DockPadding(4, 4, 4, 4)
+
+	local reset = vgui.Create("DButton", footer)
+	reset:Dock(RIGHT)
+	reset:SetWide(180)
+	reset:SetText("Reset all to defaults")
+	reset.DoClick = function()
+		Derma_Query("Clear all weapon reorder settings?", "Reset", "Yes", function()
+			userOrder = {}
+			SaveUserOrder()
+			classes = GatherClasses()
+			BuildArrays()
+			RefreshAll()
+		end, "No")
+	end
+
+	classes = GatherClasses()
+	BuildArrays()
+	RefreshAll()
+end
+
+concommand.Add("weapon_switcher_reorder", OpenReorderMenu)
