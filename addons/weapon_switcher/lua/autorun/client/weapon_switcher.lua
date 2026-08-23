@@ -5,6 +5,8 @@
 --   - overrides hooks
 --   -
 
+if engine.ActiveGamemode() ~= "sandbox_modded" then return end
+
 local HOOK_INPUT        = "WeaponSwitcher_Input"
 local HOOK_PAINT        = "WeaponSwitcher_Paint"
 local HOOK_SILENCE      = "WeaponSwitcher_SilenceEngine"
