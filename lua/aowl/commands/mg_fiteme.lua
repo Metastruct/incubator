@@ -230,7 +230,7 @@ local function matchmaker()
 	local pl1, pl2 = t[1], t[2]
 
 	if not pl1 then
-		timer.Destroy(Tag)
+		timer.Remove(Tag)
 		--MsgN"no fitemers"
 
 		return
