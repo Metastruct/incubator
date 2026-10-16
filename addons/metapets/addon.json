@@ -1,0 +1,16 @@
+{
+    "title": "MetaPets",
+    "type": "fun",
+    "tags": [
+        "pets",
+        "gambling",
+        "fun",
+        "wip"
+    ],
+    "ignore": [
+        "*.psd",
+        "*.vcproj",
+        "*.git*",
+        "*.bat"
+    ]
+}
